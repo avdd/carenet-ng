@@ -534,7 +534,7 @@ function runProtractor(tests) {
               // '--seleniumAddress', 'http://localhost:4444/',
               // '--seleniumPort', '4444',
               // '--seleniumServerJar', jar,
-              // '--directConnect', 'true',
+              '--directConnect', 'true',
               '--browser', config.browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
