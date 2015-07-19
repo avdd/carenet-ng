@@ -1,0 +1,10 @@
+language: python
+
+install: 
+  - npm install
+  - npm install -g bower gulp
+  - bower install
+
+script: 
+  - gulp test
+

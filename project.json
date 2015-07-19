@@ -1,0 +1,79 @@
+{
+  "app": "main",
+
+  "ports": {
+    "karma":        8066,
+    "test":         8077,
+    "interactive":  8088,
+    "livereload": 35729
+  },
+
+  "paths": {
+    "client_src":   "src/client",
+    "server_src":   "src/server",
+    "client_assets":  "src/assets",
+    "client_test":  "test/client",
+    "server_test":  "test/server",
+    "ui_test":      "test/ui",
+    "spec_test":    "test/spec",
+    "vendor_src":   ".cache/bower_components",
+
+    "tmp":    ".run/carenet-gulp-tmp",
+    "python": ".cache/python",
+
+    "api_prefix":     "/api",
+    "vendor_prefix":  "/vendor"
+  },
+
+  "files": {
+    "manifest_json":  "manifest.json",
+    "bower_json":     "bower.json",
+    "karma_conf":     "karma.conf.js",
+    "protractor_conf":"protractor.conf.js",
+    "python_main":    "main.py",
+    "favicon":        "favicon.ico",
+    "initjs":         "init.js",
+    "appjs":          "app.js",
+    "appcss":         "app.css",
+    "vendorjs":       "vendor.js",
+    "vendorcss":      "vendor.css",
+
+    "client_js":    ["*.js"],
+    "client_css":   ["*.css"],
+    "client_html":  ["index.html"],
+    "client_misc":  ["misc/*"],
+    "client_templates":
+                    ["templates/*.html"],
+    "client_test":  ["*.js"],
+    "server_py":    ["*.py"],
+    "server_test":  ["*.py"],
+    "ui_test":      ["*.js"],
+    "spec_test":    ["*.js"]
+  },
+
+  "test": {
+    "js": [
+      "angular-mocks/angular-mocks.js"
+    ]
+  },
+
+  "vendor": {
+    "css": [
+      "bootstrap/dist/css/bootstrap.css"
+    ],
+    "js": [
+      "jquery/dist/jquery.js",
+      "angular/angular.js",
+      "angular-route/angular-route.js",
+      "angular-bootstrap/ui-bootstrap-tpls.js"
+    ],
+    "other": {
+      "bootstrap/dist": [
+        "fonts/glyphicons-halflings-regular.eot",
+        "fonts/glyphicons-halflings-regular.ttf",
+        "fonts/glyphicons-halflings-regular.woff",
+        "fonts/glyphicons-halflings-regular.woff2"
+      ]
+    }
+  }
+}
