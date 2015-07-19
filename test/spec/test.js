@@ -14,7 +14,8 @@ function getLog(f) {
 afterEach(function () {
   getLog().then(function (log) {
     log.forEach(function (x) {
-      console.log(' * ' + x.message);
+      if (x.level.value > 900)
+        console.log(' * ' + x.message);
     });
   });
 });

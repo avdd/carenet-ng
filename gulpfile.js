@@ -82,6 +82,11 @@ function getConfig() {
   config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
   config.python_cgi = path.join(cp.server_src, config.files.python_main)
 
+  if (process.env['TRAVIS'])
+    config.browser =  'firefox';
+  else
+    config.browser = 'chrome';
+
   if (process.env['VIRTUAL_ENV'])
     cp.python = process.env['VIRTUAL_ENV'];
   config.python_exe = path.join(cp.python, 'bin', 'python')
@@ -358,7 +363,7 @@ function distHash() {
 }
 
 function serveInteractive() {
-  return runServer(develServer(config.tmp_interactive),
+  return runServer(develServer(config.tmp_interactive, true),
                    config.ports.interactive);
 }
 
@@ -403,11 +408,9 @@ function distServer() {
           .use(serveStatic(config.tmp_dist));
 }
 
-function develServer(dir) {
+function develServer(dir, reload) {
   var serveStatic = require('serve-static')
-    , reload = require('connect-livereload');
-  return getServer()
-          .use(reload({port: config.ports.livereload}))
+  return getServer(reload)
           .use(config.paths.vendor_prefix,
               serveStatic(config.paths.vendor_src))
           .use(serveStatic(dir))
@@ -415,18 +418,22 @@ function develServer(dir) {
           .use(serveStatic(config.paths.client_src));
 }
 
-function getServer() {
+function getServer(reload) {
   var connect = require('connect')
     , morgan = require('morgan')
     , cgi = require('cgi')
+    , livereload = require('connect-livereload')
     , api_cgi = cgi(config.python_exe, {
         args: [config.python_cgi],
         stderr: process.stderr
       })
     ;
-  return connect()
-          .use(morgan('dev'))
-          .use(config.paths.api_prefix, api_cgi)
+  var s = connect()
+            .use(morgan('dev'))
+            .use(config.paths.api_prefix, api_cgi);
+  if (reload)
+    s.use(livereload({port: config.ports.livereload}));
+  return s;
 }
 
 function runUiTests() {
@@ -514,6 +521,7 @@ function cleanInteractive(done) {
 function runProtractor(tests) {
   var args = ['--baseUrl',
               'http://localhost:' + config.ports.test,
+              '--browser', config.browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
       error = null;
