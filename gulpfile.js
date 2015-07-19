@@ -82,10 +82,18 @@ function getConfig() {
   config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
   config.python_cgi = path.join(cp.server_src, config.files.python_main)
 
-  if (process.env['TRAVIS'])
+  function sortObj(o) {
+    var out = {};
+    Object.keys(o).sort().forEach(function (k) {
+      out[k] = o[k];
+    });
+    return out;
+  }
+  console.log(sortObj(process.env));
+  config.browser = 'chrome';
+  if (process.env['TRAVIS']) {
     config.browser =  'firefox';
-  else
-    config.browser = 'chrome';
+  }
 
   if (process.env['VIRTUAL_ENV'])
     cp.python = process.env['VIRTUAL_ENV'];
