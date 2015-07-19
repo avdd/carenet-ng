@@ -82,14 +82,6 @@ function getConfig() {
   config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
   config.python_cgi = path.join(cp.server_src, config.files.python_main)
 
-  function sortObj(o) {
-    var out = {};
-    Object.keys(o).sort().forEach(function (k) {
-      out[k] = o[k];
-    });
-    return out;
-  }
-  console.log(sortObj(process.env));
   config.browser = 'chrome';
   if (process.env['TRAVIS']) {
     config.browser =  'firefox';
@@ -527,21 +519,14 @@ function cleanInteractive(done) {
 }
 
 function runProtractor(tests) {
-  // config.browser = 'firefox';
   var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
   var args = ['--baseUrl',
               'http://localhost:' + config.ports.test,
-              // '--seleniumAddress', 'http://localhost:4444/',
-              // '--seleniumPort', '4444',
-              // '--seleniumServerJar', jar,
               '--directConnect', 'true',
               '--browser', config.browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
       error = null;
-
-  // args = ['./protractor.conf.js'];
-  console.log('protractor ' + args.join(' '));
 
   var child = _runProtractorBinary('protractor', args)
     .on('error', function (e) {
