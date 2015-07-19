@@ -5,7 +5,7 @@ install:
   - npm install -g bower gulp
   - mkdir .cache
   - bower install
-  - python virtualenv .cache/python
+  - pip install -r python-requirements.txt
 
 script: 
   - gulp test
