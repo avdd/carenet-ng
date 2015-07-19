@@ -81,6 +81,9 @@ function getConfig() {
   config.min_css = prefixed(cp.vendor_src, assetMin('css', config.vendor.css));
   config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
   config.python_cgi = path.join(cp.server_src, config.files.python_main)
+
+  if (process.env['VIRTUAL_ENV'])
+    cp.python = process.env['VIRTUAL_ENV'];
   config.python_exe = path.join(cp.python, 'bin', 'python')
 
   function tmpdir() {

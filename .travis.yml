@@ -3,7 +3,9 @@ language: python
 install: 
   - npm install
   - npm install -g bower gulp
+  - mkdir .cache
   - bower install
+  - python virtualenv .cache/python
 
 script: 
   - gulp test

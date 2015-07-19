@@ -23,9 +23,10 @@ module.exports = function(config) {
 
   coverage[app_js] = ['coverage'];
 
-  var osd = [];
+  var reporters = [];
+
   if (process.env['DESKTOP_SESSION'] == 'ubuntu')
-      osd.push('osd-notifier');
+      reporters.push('osd-notifier');
 
   config.set({
 
@@ -34,7 +35,7 @@ module.exports = function(config) {
     singleRun: true,
 
     frameworks: ['jasmine'],
-    reporters: ['progress', 'coverage', 'coverage-reporter'].concat(osd),
+    reporters: reporters.concat(['progress', 'coverage']),
 
     port: project.ports.karma,
 
@@ -51,16 +52,11 @@ module.exports = function(config) {
       'karma-jasmine',
       'karma-phantomjs-launcher',
       'karma-coverage',
-      'coverage-reporter',
       'osd-notifier',
     ],
 
     coverageReporter: {
-      dir: '.cache/karma-coverage-report',
-      reporters: [
-        { type: 'text', subdir: '.', file: 'text.txt' },
-        // { type: 'text-summary', subdir: '.', file: 'text-summary.txt' },
-      ]
+      reporters: [{type: 'text'}]
     },
 
     colors: true,
@@ -106,35 +102,6 @@ function NotifyReporter(formatError) {
     exec(cmd, function () {});
   }
 }
-
-function CoverageReporter(config, formatError) {
-
-  BaseReporter.call(this, formatError);
-
-  var coverage = config.coverageReporter;
-  var dir = coverage.dir;
-  var path = require('path');
-  var fs = require('fs');
-
-  this.onRunComplete = function MyRunComplete(browsers, results) {
-    coverage.reporters.forEach(function (x) {
-      if (!/^text/.test(x.type))
-        return;
-      var f = path.join(dir, x.subdir, x.file);
-      fs.exists(f, function () {
-        process.stdout.write(readFile(f))
-        fs.rename(f, f + '.old');
-      });
-    });
-  }
-
-}
-
-CoverageReporter.$inject = ['config', 'formatError'];
-
-fakeModule('coverage-reporter', 'karma', {
-  'reporter:coverage-reporter': ['type', CoverageReporter]
-});
 
 fakeModule('osd-notifier', 'karma', {
   'reporter:osd-notifier': ['type', NotifyReporter]
