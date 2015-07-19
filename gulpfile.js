@@ -527,12 +527,20 @@ function cleanInteractive(done) {
 }
 
 function runProtractor(tests) {
+  // config.browser = 'firefox';
+  var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
   var args = ['--baseUrl',
               'http://localhost:' + config.ports.test,
+              // '--seleniumAddress', 'http://localhost:4444/',
+              '--seleniumPort', '4444',
+              '--seleniumServerJar', jar,
               '--browser', config.browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
       error = null;
+
+  // args = ['./protractor.conf.js'];
+  console.log('protractor ' + args.join(' '));
 
   var child = _runProtractorBinary('protractor', args)
     .on('error', function (e) {
