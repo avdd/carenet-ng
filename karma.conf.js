@@ -17,7 +17,7 @@ module.exports = function(config) {
     , extra_js = prefixed(project.paths.vendor_src, project.test.js)
     , app_js = prefixed(project.paths.client_src, project.files.client_js)
     , test_js = prefixed(project.paths.client_test, project.files.client_test)
-    , files = vendor_js.concat(extra_js, app_js, test_js)
+    , files = vendor_js.concat(extra_js, test_js, app_js)
 
     , coverage = {};
 

@@ -2,6 +2,7 @@
 'use strict';
 
 var gulp = require('gulp')
+  , runSequence = require('run-sequence')
   , through = require('through2')
   , path = require('path')
   , del = require('del')
@@ -14,10 +15,20 @@ var gulp = require('gulp')
   , serverInstance = null
   ;
 
-task('default', ['serve-interactive'], interactiveDevel);
-task('dist', ['serve-dist'], interactiveDist);
+task('default', ['browse-devel']);
+task('dist', ['browse-dist']);
+task('build', ['dist-html']);
 
-task('test', runTests);
+task('browse-devel', ['serve-devel'], browseDevel);
+task('browse-dist', ['serve-dist'], browseDist);
+
+task('test', function allTests() {
+  return runSequence('test-client',
+                     'test-api',
+                     'test-ui',
+                     'test-spec');
+});
+
 
 task('test-client', runClientTests);
 task('test-client-watch', watchClientTests);
@@ -27,14 +38,14 @@ task('test-ui', ['update-webdriver', 'serve-test'], runUiTests);
 task('test-spec', ['update-webdriver', 'serve-spec'], runSpecTests);
 
 task('serve-test', ['initjs-test'], serveTest);
-task('initjs-test', ['clean-test'], testInitJs);
-task('serve-interactive', ['initjs-interactive'], serveInteractive);
-task('initjs-interactive', ['clean-interactive'], interactiveInitJs);
+task('initjs-test', ['clean-test'], initJsTest);
+task('serve-devel', ['initjs-devel'], serveDevel);
+task('initjs-devel', ['clean-devel'], initJsDevel);
 
 task('serve-spec', ['dist-html'], serveSpec);
 task('serve-dist', ['dist-html'], serveDist);
-task('dist-html', ['dist-initjs'], distHtml);
-task('dist-initjs', ['dist-hash'], distInitJs);
+task('dist-html', ['initjs-dist'], distHtml);
+task('initjs-dist', ['dist-hash'], initJsDist);
 task('dist-hash', ['dist-assets'], distHash);
 task('dist-assets', ['app-css', 'app-js', 'app-misc',
                      'vendor-css', 'vendor-js', 'vendor-misc']);
@@ -46,10 +57,10 @@ task('vendor-css', ['clean-dist'], distVendorCss);
 task('vendor-js', ['clean-dist'], distVendorJs);
 task('vendor-misc', ['clean-dist'], distVendorMisc);
 
-task('clean', ['clean-dist', 'clean-test', 'clean-interactive']);
+task('clean', ['clean-dist', 'clean-test', 'clean-devel']);
 task('clean-dist', cleanDist);
 task('clean-test', cleanTest);
-task('clean-interactive', cleanInteractive);
+task('clean-devel', cleanDevel);
 
 task('update-webdriver', updateWebdriver);
 
@@ -59,6 +70,8 @@ function getConfig() {
   var config = loadJson('project.json'),
       cp = config.paths,
       map = [
+        // config.Y =
+        // <config.paths.X> / <config.files.Y>
         ['client_assets','client_misc'],
         ['client_src',   'client_css'],
         ['client_src',   'client_html'],
@@ -97,17 +110,19 @@ function getConfig() {
     return path.join.apply(null, args);
   }
 
-  config.tmp_dist = tmpdir('dist');
-  config.tmp_assets = tmpdir('dist', 'assets');
-  config.tmp_css = tmpdir('dist', 'assets', 'css');
-  config.tmp_misc = tmpdir('dist', 'assets', 'misc');
-  config.tmp_test = tmpdir('test');
-  config.tmp_interactive = tmpdir('interactive');
+  config.out = {
+    dist: tmpdir('dist'),
+    assets: tmpdir('dist', 'assets'),
+    css: tmpdir('dist', 'assets', 'css'),
+    misc: tmpdir('dist', 'assets', 'misc'),
+    test: tmpdir('test'),
+    devel: tmpdir('devel')
+  };
 
   config.setHash = function setHash(hex) {
     var assetHash = 'assets-' + hex;
     config.assetHash = assetHash;
-    config.tmp_hash = tmpdir('dist', assetHash);
+    config.out.hash = tmpdir('dist', assetHash);
   }
   return config;
 }
@@ -179,50 +194,59 @@ function watchApiTests() {
   }
 }
 
-function runTests() {
-  var run = require('run-sequence');
-  return run('test-client',
-             'test-api',
-             'test-ui',
-             'test-spec');
+function initJsTest() {
+  return makeDevelInitJs(config.out.test);
 }
 
-function testInitJs() {
-  return develInitJs(config.tmp_test);
+function initJsDevel() {
+  return makeDevelInitJs(config.out.devel);
 }
 
-function interactiveInitJs() {
-  return develInitJs(config.tmp_interactive);
-}
-
-function develInitJs(dir) {
-
-  var src = config.client_js.concat(config.client_css)
-    , data = {
-        app: config.app
-      , devel: true
+function makeDevelInitJs(out) {
+  var merge = require('merge-stream');
+  var data = {
+        devel: true
       , js: config.vendor_js
       , css: config.vendor_css
       };
-  return gulp.src(src, {read:false})
-              .pipe(assetCollector(data))
-              .pipe(gulp.dest(dir));
+
+  var js = gulp.src(config.client_js, {read:false})
+               .pipe(push(data.js)),
+
+      css = gulp.src(config.client_css, {read:false})
+               .pipe(push(data.css));
+
+  return merge(js, css).pipe(end())
+            .pipe(gulp.dest(out));
+
+  function push(l) {
+    return through.obj(function (f, _, cb) {
+      l.push(f.relative);
+      cb();
+    });
+  }
+
+  function end() {
+    return through.obj(null, null, function (cb) {
+      this.push(makeInitJs(data));
+      cb();
+    });
+  }
 
 }
 
-function distInitJs() {
+function initJsDist() {
   if (!config.assetHash)
     throw new Error('missing asset hash');
   var js = [config.files.vendorjs, config.files.appjs]
     , css = [config.files.vendorcss, config.files.appcss]
     , data = {
-        app: config.app
-      , devel: false
+        devel: false
       , js: prefixed(config.assetHash, js)
       , css: prefixed(config.assetHash + '/css', css)
       };
-  return Source(initJs(data))
-          .pipe(gulp.dest(config.tmp_hash));
+  return Source(makeInitJs(data))
+            .pipe(gulp.dest(config.out.hash));
 }
 
 function Source(file) {
@@ -235,30 +259,12 @@ function Source(file) {
   return s;
 }
 
-function initJs(data) {
-  var script = '\ninitApp(' + JSON.stringify(data) + ');\n';
+function makeInitJs(data) {
+  var script = '\nINIT(' + JSON.stringify(data) + ');\n';
   return new $.util.File({
     path: config.files.initjs,
     contents: new Buffer(script)
   });
-}
-
-function assetCollector(data) {
-
-  return through.obj(consume, end);
-
-  function consume(f, _, cb) {
-    var rel = f.relative;
-    if (/\.js$/.test(rel))
-      data.js.push(rel)
-    else if (/\.css$/.test(rel))
-      data.css.push(rel)
-    cb();
-  }
-  function end(cb) {
-    this.push(initJs(data));
-    cb();
-  }
 }
 
 function distHtml() {
@@ -268,13 +274,13 @@ function distHtml() {
   return gulp.src(config.client_html)
     .pipe($.replace(config.files.initjs, initjs))
     .pipe($.replace('misc/power', config.assetHash + '/misc/power'))
-    .pipe(gulp.dest(config.tmp_dist));
+    .pipe(gulp.dest(config.out.dist));
 }
 
 function distAppCss() {
   return gulp.src(config.client_css)
              .pipe(require('gulp-concat')(config.files.appcss))
-             .pipe(gulp.dest(config.tmp_css));
+             .pipe(gulp.dest(config.out.css));
 }
 
 function distAppJs() {
@@ -284,7 +290,7 @@ function distAppJs() {
           .pipe($.ngAnnotate())
           .pipe($.concat(config.files.appjs))
           .pipe($.uglify())
-          .pipe(gulp.dest(config.tmp_assets));
+          .pipe(gulp.dest(config.out.assets));
 }
 
 function ngTemplateStream() {
@@ -298,25 +304,25 @@ function ngTemplateStream() {
 
 function distAppMisc() {
   return gulp.src(config.client_misc)
-             .pipe(gulp.dest(config.tmp_misc));
+             .pipe(gulp.dest(config.out.misc));
 }
 
 function distVendorCss() {
   return gulp.src(config.min_css)
               .pipe($.concat(config.files.vendorcss))
-              .pipe(gulp.dest(config.tmp_css));
+              .pipe(gulp.dest(config.out.css));
 }
 
 function distVendorJs() {
   return gulp.src(config.min_js)
               .pipe($.concat(config.files.vendorjs))
-              .pipe(gulp.dest(config.tmp_assets));
+              .pipe(gulp.dest(config.out.assets));
 }
 
 function distVendorMisc() {
 
   var merge = require('merge-stream'),
-      dest = config.tmp_assets,
+      dest = config.out.assets,
       stream = null;
 
   Object.keys(config.vendor.other || {}).forEach(each);
@@ -349,7 +355,7 @@ function distHash() {
   var crypto = require('crypto'),
       fs = require('fs'),
       hash = crypto.createHash('sha1');
-  return gulp.src(path.join(config.tmp_assets, '**'))
+  return gulp.src(path.join(config.out.assets, '**'))
              .pipe(through.obj(In, Out));
   function In(f, _, cb) {
     if (f.contents)
@@ -358,22 +364,22 @@ function distHash() {
   }
   function Out(cb) {
     config.setHash(hash.digest('hex').substring(0,10));
-    fs.rename(config.tmp_assets, config.tmp_hash, cb);
+    fs.rename(config.out.assets, config.out.hash, cb);
   }
 }
 
-function serveInteractive() {
-  return runServer(develServer(config.tmp_interactive, true),
-                   config.ports.interactive);
+function serveDevel() {
+  return runServer(develServer(config.out.devel, true),
+                   config.ports.browse);
 }
 
 function serveTest() {
-  return runServer(develServer(config.tmp_test),
+  return runServer(develServer(config.out.test),
                    config.ports.test);
 }
 
 function serveDist() {
-  return runServer(distServer(), config.ports.interactive);
+  return runServer(distServer(), config.ports.browse);
 }
 
 function serveSpec() {
@@ -405,7 +411,7 @@ function runServer(server, port) {
 function distServer() {
   var serveStatic = require('serve-static')
   return getServer()
-          .use(serveStatic(config.tmp_dist));
+          .use(serveStatic(config.out.dist));
 }
 
 function develServer(dir, reload) {
@@ -445,7 +451,7 @@ function runSpecTests() {
 }
 
 function openBrowser() {
-  require('opn')('http://localhost:' + config.ports.interactive + '/');
+  require('opn')('http://localhost:' + config.ports.browse + '/');
 }
 
 function logChange(event) {
@@ -469,7 +475,7 @@ function watchReload() {
         config.client_css,
         config.client_templates,
         config.server_py,
-        path.join(config.tmp_interactive, config.files.initjs)
+        path.join(config.out.devel, config.files.initjs)
       ];
 
   watch(watches, onChange);
@@ -487,7 +493,7 @@ function watchReload() {
       case 'added':
       case 'deleted':
         if (assetsRegexp.test(event.path)) {
-          interactiveInitJs();
+          initJsDevel();
           return;
         }
     }
@@ -495,27 +501,27 @@ function watchReload() {
   }
 }
 
-function interactiveDist(done) {
+function browseDist(done) {
   openBrowser();
   done();
 }
 
-function interactiveDevel(done) {
+function browseDevel(done) {
   watchReload();
   openBrowser();
   done();
 }
 
 function cleanDist(done) {
-  del(config.tmp_dist, done);
+  del(config.out.dist, done);
 }
 
 function cleanTest(done) {
-  del(config.tmp_test, done);
+  del(config.out.test, done);
 }
 
-function cleanInteractive(done) {
-  del(config.tmp_interactive, done);
+function cleanDevel(done) {
+  del(config.out.devel, done);
 }
 
 function runProtractor(tests) {

@@ -2,13 +2,8 @@
 'use strict';
 
 function bootstrap(f) {
-  var args = {
-    app: 'main',
-    devel: true
-  };
   return function () {
-    setupApp(args);
-    module(args.app);
+    module(window.CONFIG.app);
     inject(f);
   }
 }

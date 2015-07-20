@@ -1,10 +1,8 @@
 {
-  "app": "main",
-
   "ports": {
     "karma":        8066,
     "test":         8077,
-    "interactive":  8088,
+    "browse":       8088,
     "livereload": 35729
   },
 

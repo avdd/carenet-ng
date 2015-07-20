@@ -133,25 +133,20 @@ OZiAwhe43LdQFtoQxM00zSCDjDciRSZQQAA7">
 <script>
 var timelog = (function () {
   var start = Date.now();
-
-  function log(msg) {
+  return function log(msg) {
     var t = Date.now() - start;
     console.warn('[' + t + '] ' + msg);
   }
 
-  return log;
 })();
 
 (function () {
 
-  function loadAssets(css, js, onupdate, done, log) {
+  function loadAssets(css, js, onupdate, done) {
     var itemsLoaded = 0,
         totalItems = 0;
 
     setTimeout(start, 10);
-
-    if (log===undefined)
-      log = function (x) {}
 
     function start() {
       add(addCss, css);
@@ -167,31 +162,28 @@ var timelog = (function () {
     }
 
     function addCss(url) {
-      var e = document.createElement('link');
-      e.rel = 'stylesheet';
-      e.href = url;
-      e.onload=function() { tally(url) };
-      document.head.appendChild(e);
+      var el = document.createElement('link');
+      el.rel = 'stylesheet';
+      el.href = url;
+      el.onload=function() { tally(url) };
+      document.head.appendChild(el);
     }
 
     function addJs(url) {
-      var e = document.createElement('script');
-      e.async = false;
-      e.src = url;
-      e.onload=function() { tally(url) };
-      document.head.appendChild(e);
+      var el = document.createElement('script');
+      el.async = false;
+      el.src = url;
+      el.onload=function() { tally(url) };
+      document.head.appendChild(el);
     }
 
     function tally(url) {
       itemsLoaded = Math.floor(itemsLoaded)+1;
-      log('loaded ' + itemsLoaded + '/' + totalItems + ': ' + url);
-      updateProgress();
+      updateProgress(url);
     }
 
-    function updateProgress() {
-      if (totalItems == 0)
-        return;
-      onupdate(Math.round(itemsLoaded / totalItems * 100));
+    function updateProgress(url) {
+      onupdate(itemsLoaded, totalItems, url);
     }
 
     function check() {
@@ -207,18 +199,22 @@ var timelog = (function () {
 
   }
 
-  window.initApp = function init(args) {
-    window.log = timelog;
+  window.INIT = function INIT(args) {
+    window.CONFIG = args;
     document.getElementById('loading-box-inner').style.display = 'block';
     return loadAssets(args.css, args.js, progress, done, timelog);
 
-    function progress(percent) {
+    function progress(loaded, total, item) {
+      if (total == 0)
+        return;
+      if (item)
+        timelog('loaded ' + loaded + '/' + total + ': ' + item);
+      var percent = Math.round(loaded / total * 100);
       document.getElementById('loading-progress-inner')
-        .style.width = percent + '%';
+              .style.width = percent + '%';
     }
 
     function done() {
-      setupApp(args);
       angular.bootstrap(document, [args.app], {strictDi: !args.devel});
     }
   }

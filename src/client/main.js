@@ -1,7 +1,9 @@
-(function() {
-'use strict';
 
-window.setupApp = setupApp;
+window.CONFIG = window.CONFIG || {devel:true};
+window.CONFIG.app = 'default';
+
+(function () {
+'use strict';
 
 var deps = [
   'ngRoute',
@@ -9,14 +11,11 @@ var deps = [
   'zModule'
 ];
 
-function setupApp(args) {
-  /* istanbul ignore next (no coverage) */
-  if (!args.devel)
-    deps.push('templates');
-  angular.module(args.app).value('arguments', args);
-}
+/* istanbul ignore next (no coverage) */
+if (!window.CONFIG.devel)
+  deps.push('templates');
 
-angular.module('main', deps)
+angular.module(window.CONFIG.app, deps)
   .controller('ViewCtrl', ViewCtrl)
   .directive('zzRemove',
 /* istanbul ignore next (no coverage) */
