@@ -3,7 +3,7 @@
     "karma":        8066,
     "test":         8077,
     "browse":       8088,
-    "livereload": 35729
+    "livereload":   35729
   },
 
   "paths": {
