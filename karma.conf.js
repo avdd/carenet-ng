@@ -78,12 +78,6 @@ function fakeModule(name, parent, obj) {
   Module._cache[filename] = {exports:obj};
 }
 
-function readFile(fn) {
-  var read = require('fs').readFileSync
-    , opts = {encoding: 'utf-8'};
-  return read(fn, opts);
-}
-
 var BaseReporter = require('karma/lib/reporters/base');
 
 function NotifyReporter(formatError) {
