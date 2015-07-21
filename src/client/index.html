@@ -19,21 +19,17 @@
 * {
   box-sizing: border-box;
 }
-body{
+body {
   line-height: 1.42857;
   font-size: 14px;
   font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-}
-#loading-box img {
-  vertical-align: middle;
-  border: 0 none;
 }
 </style>
 
 <style>
 @keyframes loading-box-throbber {
   from {color:#999}
-    50% {color:gold}
+   50% {color:gold}
     to {color:#999}
 }
 #loading-box {
@@ -43,6 +39,10 @@ body{
   width: 100%;
   height: 100%;
   background-color: #ddd;
+}
+#loading-box img {
+  vertical-align: middle;
+  border: 0 none;
 }
 #loading-box-inner {
   display: none;
@@ -89,7 +89,7 @@ body{
 
 </head>
 
-<body>
+<body class=devel>
 
 <div id=loading-box zz-remove>
 <div id=loading-box-inner>
@@ -127,9 +127,9 @@ OZiAwhe43LdQFtoQxM00zSCDjDciRSZQQAA7">
     </div></div>
 </div></div>
 
-<div ng-view></div>
+<div id=series-notice>__SERIES__</div>
+<div class=main-container ng-view></div>
 <div main-menu></div>
-
 <script>
 var timelog = (function () {
   var start = Date.now();
@@ -201,6 +201,8 @@ var timelog = (function () {
 
   window.INIT = function INIT(args) {
     window.CONFIG = args;
+    if (args.series)
+      document.getElementById('series-notice').innerHTML = args.series;
     document.getElementById('loading-box-inner').style.display = 'block';
     return loadAssets(args.css, args.js, progress, done, timelog);
 

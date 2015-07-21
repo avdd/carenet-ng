@@ -9,7 +9,6 @@ host=rev
 release=$(git describe --tags)
 branch=$(git rev-parse --abbrev-ref HEAD)-
 dirty=$(git diff --no-ext-diff --quiet --exit-code || echo '+')
-
 id="$branch$release$dirty"
 there=public_html/carenet-ng/$id
 dist=$root/.run/carenet-gulp-tmp/dist

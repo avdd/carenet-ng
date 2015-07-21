@@ -40,7 +40,13 @@ task('test-spec', ['update-webdriver', 'serve-spec'], runSpecTests);
 task('serve-test', ['initjs-test'], serveTest);
 task('initjs-test', ['clean-test'], initJsTest);
 task('serve-devel', ['initjs-devel'], serveDevel);
-task('initjs-devel', ['clean-devel'], initJsDevel);
+task('initjs-devel', ['git-info', 'clean-devel'], initJsDevel);
+
+task('git-info', ['git-branch', 'git-version', 'git-clean'], gitInfo);
+
+task('git-branch', gitBranch);
+task('git-version', gitVersion);
+task('git-clean', gitClean);
 
 task('serve-spec', ['dist-html'], serveSpec);
 task('serve-dist', ['dist-html'], serveDist);
@@ -127,6 +133,21 @@ function getConfig() {
   return config;
 }
 
+
+function runGit(cmd) {
+  var q = Q.defer();
+  require('child_process').exec('git ' + cmd, done);
+  return q.promise;
+
+  function done(err, stdout, stderr){
+    if (err)
+      q.reject(err, stdout, stderr);
+    else
+      q.resolve(stdout, stderr);
+  }
+};
+
+
 function runClientTests() {
   var args = {
     singleRun: true,
@@ -202,10 +223,44 @@ function initJsDevel() {
   return makeDevelInitJs(config.out.devel);
 }
 
+function gitBranch() {
+  return gitVar('rev-parse --abbrev-ref HEAD', 'gitBranch');
+}
+
+function gitVersion() {
+  return gitVar('describe --tags', 'gitVersion')
+}
+
+function gitClean() {
+  return runGit('diff --no-ext-diff --quiet --exit-code')
+          .then(clean, dirty);
+  function clean() {
+    config.gitClean = true;
+  }
+  function dirty() {
+    config.gitClean = false;
+  }
+}
+
+function gitInfo() {
+  var suffix = config.gitClean ? '' : '+';
+  config.gitInfo = (config.gitBranch
+                    + '-' + config.gitVersion
+                    + suffix);
+}
+
+function gitVar(cmd, name) {
+  return runGit(cmd).then(ok);
+  function ok (out) {
+    config[name] = out.trim();
+  }
+}
+
 function makeDevelInitJs(out) {
   var merge = require('merge-stream');
   var data = {
         devel: true
+      , series: config.gitInfo
       , js: config.vendor_js
       , css: config.vendor_css
       };
@@ -652,6 +707,5 @@ function getBowerFiles() {
   function stripPrefix(s) {
     return s.replace(prefix+'/', '');
   }
-
 }
 
