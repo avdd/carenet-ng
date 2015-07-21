@@ -50,7 +50,7 @@ task('git-clean', gitClean);
 
 task('serve-spec', ['dist-html'], serveSpec);
 task('serve-dist', ['dist-html'], serveDist);
-task('dist-html', ['initjs-dist'], distHtml);
+task('dist-html', ['git-info', 'initjs-dist'], distHtml);
 task('initjs-dist', ['dist-hash'], initJsDist);
 task('dist-hash', ['dist-assets'], distHash);
 task('dist-assets', ['app-css', 'app-js', 'app-misc',
@@ -223,7 +223,7 @@ function initJsDevel() {
   return makeDevelInitJs(config.out.devel);
 }
 
-function gitBranch() {
+function gitBranch(done) {
   return gitVar('rev-parse --abbrev-ref HEAD', 'gitBranch');
 }
 
@@ -326,9 +326,15 @@ function distHtml() {
   if (!config.assetHash)
     throw new Error('missing asset hash');
   var initjs = config.assetHash + '/' + config.files.initjs;
+  var series = (config.gitBranch == 'release'
+                ? 'live'
+                : 'staging')
+  var bodyTag = '<body class=' + series + '>';
   return gulp.src(config.client_html)
     .pipe($.replace(config.files.initjs, initjs))
     .pipe($.replace('misc/power', config.assetHash + '/misc/power'))
+    .pipe($.replace('<body class=devel>', bodyTag))
+    .pipe($.replace('__SERIES__', config.gitInfo))
     .pipe(gulp.dest(config.out.dist));
 }
 
