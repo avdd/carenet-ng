@@ -2,4 +2,6 @@ Testing the Travis
 
 spurious change
 
-working on feature-x
+changes:
+
+* feature-x
