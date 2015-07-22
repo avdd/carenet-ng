@@ -12,7 +12,6 @@ install:
   - mkdir .cache
   - bower install
   - pip install -r python.txt
-  - echo it stinks
 
 script: 
   - gulp test
