@@ -2,40 +2,171 @@
 
 set -eu
 
-root=$(readlink -f $(dirname $0)/..)
-host=rev
-# TODO: distinct there location based on branch
+ROOT=$(readlink -f $(dirname $0)/..)
+HOST=rev
+DEST=~/public_html/carenet-ng
 
-release=$(git describe --tags)
-branch=$(git rev-parse --abbrev-ref HEAD)-
-dirty=$(git diff --no-ext-diff --quiet --exit-code || echo '+')
-id="$branch$release$dirty"
-there=public_html/carenet-ng/$id
-dist=$root/.run/carenet-gulp-tmp/dist
-upgrade_html=$root/src/client/upgrading.html
-index_html=index.html
+DIST=$ROOT/.run/carenet-gulp-tmp/dist
+UPGRADE_HTML=$ROOT/src/client/upgrading.html
+INDEX_HTML=index.html
 
-if [[ ! -d "$dist" ]]
-then
-  echo build first
-  exit 1
-fi
-
-assets=($dist/assets-*)
-
-if [[ ${#assets[@]} -ne 1 ]]
-then
-  echo clean first
-  exit 2
-fi
-
-assets=$there/$(basename $dist/assets-*)
+LIVE=$DEST/live
+STAGING=$DEST/staging
 
 RSYNC='rsync -v'
 
-ssh $host "mkdir -p $there"
-$RSYNC $upgrade_html $host:$there/$index_html
-$RSYNC -ra --delete $dist/assets-*/  $host:$there/'assets-*/'
-ssh $host "test -d $assets || mv -v $there/assets-* $assets"
-# $RSYNC -ra --exclude /$index_html $dist/ $host:$there/
-$RSYNC $dist/$index_html $host:$there/$index_html
+main() {
+
+  TAG="${1:-}"
+  BRANCH=$(git_branch)
+  OUTGOING=
+  CLEAN=
+
+  git_outgoing && OUTGOING=1
+  git_clean && CLEAN=1
+
+  if [[ "$TAG" ]]
+  then
+    publish_release
+  elif [[ "$OUTGOING" ]]
+  then
+    publish_staging
+  else
+    fatal "Nothing to publish"
+  fi
+}
+
+publish_staging() {
+  local suffix=$(git describe --tags --dirty=+)
+  ID="$BRANCH$suffix"
+
+  if gulp test
+  then
+    warn_unclean
+    git push -u origin $BRANCH
+    publish $STAGING/$ID
+    prune_staging
+    warn_unclean
+  fi
+}
+
+publish_release() {
+  if [[ ! "$CLEAN" ]]; then
+    error "Must release from clean checkout"
+    git status -sb
+    fatal
+  fi
+  if [[ "$BRANCH" = trunk ]]; then
+    fatal "Must be trunk to release (not '$BRANCH')"
+  fi
+  
+  if [[ "$TAG" ]]
+  then
+    release="$TAG$CLEAN"
+  else
+    release=$(git describe --tags --dirty=+)
+  fi
+
+  # ${BRANCH:+$BRANCH-}
+  ID="$BRANCH$release$dirty"
+
+  # optimise: assume nothing to push implies
+  # previous push is tested
+  #if [[ "$OUTGOING" ]]
+  #then
+    gulp test $TAG
+    # will exit if failed
+  #else
+
+  if ! prompt "Release $OLD -> $TAG? [y/n]"
+  then
+    fatal Aborting as requested
+  fi
+
+  git checkout release
+  git merge --ff-only
+  git tag "$TAG"
+  # re-build ? re-test ?
+  gulp build
+  publish $STAGING/$ID
+  publish $LIVE
+  purge_staging
+  git push origin $TAG
+  git checkout trunk
+  echo Done
+}
+
+prompt() {
+  read -p "$1" answer
+  test "$answer" = y
+}
+
+warn_unclean() {
+  if [[ ! "$CLEAN" ]]; then
+    error "\n*** WARNING: unclean ***\n"
+    git status -sb
+    error
+  fi
+}
+
+git_outgoing() {
+  git rev-list --quiet origin/$BRANCH..$BRANCH
+}
+
+git_clean() {
+  git diff --no-ext-diff --quiet --exit-code
+}
+
+git_tag() {
+  git describe --tags
+}
+
+git_branch() {
+  git rev-parse --abbrev-ref HEAD
+}
+
+prune_staging() {
+  # delete all older but keep 2 
+  # find older | head -n-2
+  list="find $STAGING/* -maxdepth 0 -type d -mtime -2"
+  # FIXME should use new -V option to sort by version number
+  keep2="sort | head -n-2"
+  nuke="xargs -r rm -rf"
+  script="$list | $keep2 | $nuke"
+  ssh $HOST "$script"
+}
+
+publish() {
+
+  local dest="$1"
+  local asset_star=($DIST/assets-*)
+
+  if [[ ${#asset_star[@]} -ne 1 ]]
+  then
+    fatal "ERROR: clean first"
+  fi
+
+  local local_assets=$(basename $DIST/assets-*)
+
+  echo "PUBLISH $DIST $HOST:$dest"
+  ssh $HOST "mkdir -p $dest"
+  $RSYNC $UPGRADE_HTML $HOST:$dest/$INDEX_HTML
+  $RSYNC -ra --delete $DIST/assets-*/  $HOST:$dest/'assets-*/'
+  ssh $HOST "test -d $assets || mv -v $dest/assets-* $assets"
+  # $RSYNC -ra --exclude /$INDEX_HTML $DIST/ $HOST:$dest/
+  $RSYNC $DIST/$INDEX_HTML $HOST:$dest/$INDEX_HTML
+}
+
+error() {
+  echo -e "$@" 1>&2
+}
+
+fatal() {
+  if [[ "${1:-}" ]]; then
+    error "$@"
+  fi
+  exit 1
+}
+
+main "$@"
+exit $?

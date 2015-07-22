@@ -40,17 +40,17 @@ task('test-spec', ['update-webdriver', 'serve-spec'], runSpecTests);
 task('serve-test', ['initjs-test'], serveTest);
 task('initjs-test', ['clean-test'], initJsTest);
 task('serve-devel', ['initjs-devel'], serveDevel);
-task('initjs-devel', ['git-info', 'clean-devel'], initJsDevel);
+task('initjs-devel', ['git-id', 'clean-devel'], initJsDevel);
 
-task('git-info', ['git-branch', 'git-version', 'git-clean'], gitInfo);
+task('git-id', ['git-branch', 'git-revision', 'git-clean'], gitId);
 
 task('git-branch', gitBranch);
-task('git-version', gitVersion);
+task('git-revision', gitRevision);
 task('git-clean', gitClean);
 
 task('serve-spec', ['dist-html'], serveSpec);
 task('serve-dist', ['dist-html'], serveDist);
-task('dist-html', ['git-info', 'initjs-dist'], distHtml);
+task('dist-html', ['git-id', 'initjs-dist'], distHtml);
 task('initjs-dist', ['dist-hash'], initJsDist);
 task('dist-hash', ['dist-assets'], distHash);
 task('dist-assets', ['app-css', 'app-js', 'app-misc',
@@ -227,8 +227,8 @@ function gitBranch(done) {
   return gitVar('rev-parse --abbrev-ref HEAD', 'gitBranch');
 }
 
-function gitVersion() {
-  return gitVar('describe --tags', 'gitVersion')
+function gitRevision() {
+  return gitVar('describe --tags', 'gitRevision')
 }
 
 function gitClean() {
@@ -242,10 +242,10 @@ function gitClean() {
   }
 }
 
-function gitInfo() {
+function gitId() {
   var suffix = config.gitClean ? '' : '+';
-  config.gitInfo = (config.gitBranch
-                    + '-' + config.gitVersion
+  config.gitId = (config.gitBranch
+                    + '-' + config.gitRevision
                     + suffix);
 }
 
@@ -260,7 +260,7 @@ function makeDevelInitJs(out) {
   var merge = require('merge-stream');
   var data = {
         devel: true
-      , series: config.gitInfo
+      , version: config.gitId
       , js: config.vendor_js
       , css: config.vendor_css
       };
@@ -334,7 +334,7 @@ function distHtml() {
     .pipe($.replace(config.files.initjs, initjs))
     .pipe($.replace('misc/power', config.assetHash + '/misc/power'))
     .pipe($.replace('<body class=devel>', bodyTag))
-    .pipe($.replace('__SERIES__', config.gitInfo))
+    .pipe($.replace('__VERSION__', config.gitId))
     .pipe(gulp.dest(config.out.dist));
 }
 

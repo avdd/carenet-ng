@@ -2,7 +2,7 @@ h1 {
   color: #060;
 }
 
-#series-notice {
+#version-notice {
   background-color: #eee;
   font-weight: bold;
   font-size: small;
@@ -12,22 +12,22 @@ h1 {
   border-bottom: 1px solid;
 }
 
-.staging #series-notice,
-.devel #series-notice {
+.staging #version-notice,
+.devel #version-notice {
 }
 
-.devel #series-notice {
+.devel #version-notice {
   color: #999;
   border-color: #999;
   background-color: #eee;
 }
 
-.staging #series-notice {
+.staging #version-notice {
   border-color: #900;
   color: #900;
 }
 
-.live #series-notice {
+.live #version-notice {
   color: brown;
   border-color: brown;
   background-color: #fe6;

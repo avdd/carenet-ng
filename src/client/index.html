@@ -127,7 +127,7 @@ OZiAwhe43LdQFtoQxM00zSCDjDciRSZQQAA7">
     </div></div>
 </div></div>
 
-<div id=series-notice>__SERIES__</div>
+<div id=version-notice>__VERSION__</div>
 <div class=main-container ng-view></div>
 <div main-menu></div>
 <script>
@@ -201,8 +201,8 @@ var timelog = (function () {
 
   window.INIT = function INIT(args) {
     window.CONFIG = args;
-    if (args.series)
-      document.getElementById('series-notice').innerHTML = args.series;
+    if (args.version)
+      document.getElementById('version-notice').innerHTML = args.version;
     document.getElementById('loading-box-inner').style.display = 'block';
     return loadAssets(args.css, args.js, progress, done, timelog);
 
