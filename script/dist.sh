@@ -4,16 +4,13 @@ set -eu
 
 ROOT=$(readlink -f $(dirname $0)/..)
 HOST=rev
-DEST=~/public_html/carenet-ng
-
-DIST=$ROOT/.run/carenet-gulp-tmp/dist
-UPGRADE_HTML=$ROOT/src/client/upgrading.html
+DEST="~/public_html/carenet-ng"
+DIST="$ROOT/.run/carenet-gulp-tmp/dist"
+UPGRADE_HTML="$ROOT/src/client/upgrading.html"
 INDEX_HTML=index.html
-
-LIVE=$DEST/live
-STAGING=$DEST/staging
-
-RSYNC='rsync -v'
+LIVE="$DEST/live"
+STAGING="$DEST/staging"
+RSYNC="rsync -v"
 
 main() {
 
