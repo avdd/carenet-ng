@@ -52,21 +52,21 @@ publish_staging() {
 }
 
 publish_release() {
-  #if [[ "$DIRTY" ]]; then
-  #  error "Must release from clean checkout"
-  #  git status -sb
-  #  fatal
-  #fi
+  if [[ "$DIRTY" ]]; then
+    error "Must release from clean checkout"
+    git status -sb
+    fatal
+  fi
+
   if [[ "$BRANCH" != trunk ]]; then
     fatal "Must be on trunk to release (not '$BRANCH')"
   fi
-  
 
   # optimise: assume nothing to push implies
   # previous push is tested
   #if [[ "$OUTGOING" ]]
   #then
-    gulp test $TAG
+    gulp test # $TAG
     # will exit if failed
   #else
 
@@ -77,7 +77,7 @@ publish_release() {
   fi
 
   git checkout release
-  git merge --ff-only
+  git merge --ff-only trunk
   git tag -a "$TAG" # -m "$message"
   git push origin $TAG
   # re-build ? re-test ?
