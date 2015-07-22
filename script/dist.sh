@@ -76,7 +76,7 @@ publish_release() {
   git checkout release
   git merge --ff-only trunk
   git tag -a "$TAG" # -m "$message"
-  git push --follow-tags origin $TAG
+  git push --follow-tags origin release
   # re-build ? re-test ?
   gulp build
   publish $LIVE
