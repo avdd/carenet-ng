@@ -44,7 +44,7 @@ publish_staging() {
   if gulp test
   then
     warn_unclean
-    git push -u origin $BRANCH
+    git push --follow-tags -u origin $BRANCH
     publish $STAGING/$id
     prune_staging
     warn_unclean
@@ -79,7 +79,7 @@ publish_release() {
   git checkout release
   git merge --ff-only trunk
   git tag -a "$TAG" # -m "$message"
-  git push origin $TAG
+  git push --follow-tags origin $TAG
   # re-build ? re-test ?
   gulp build
   publish $LIVE
