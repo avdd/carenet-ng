@@ -6,7 +6,6 @@ foreach (scandir('.') as $f) {
     // TODO get tag message, branch type, etc. (colors?)
     $items[] = $f;
 }
-$items=array('first', 'second');
 ?>
 
 
