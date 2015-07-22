@@ -121,7 +121,6 @@ prune_staging() {
   # delete all older but keep 2 
   # find older | head -n-2
   list="$(ssh $HOST "(cd $STAGING; find * -maxdepth 0 -type d -mtime +1)")"
-  test "$list" || return
   list="$(echo "$list" | sort -V | head -n-2)"
   if [[ "$list" ]]
   then
