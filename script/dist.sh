@@ -35,7 +35,7 @@ main() {
 }
 
 publish_staging() {
-  local suffix=$(git describe --tags --dirty=+)
+  local suffix=$(git describe --tags --long --dirty=+)
   local id="${BRANCH:+$BRANCH-}$suffix"
 
   if gulp test
