@@ -52,23 +52,15 @@ publish_staging() {
 }
 
 publish_release() {
-  if [[ "$DIRTY" ]]; then
-    error "Must release from clean checkout"
-    git status -sb
-    fatal
-  fi
-  if [[ "$BRANCH" = trunk ]]; then
-    fatal "Must be trunk to release (not '$BRANCH')"
+  #if [[ "$DIRTY" ]]; then
+  #  error "Must release from clean checkout"
+  #  git status -sb
+  #  fatal
+  #fi
+  if [[ "$BRANCH" != trunk ]]; then
+    fatal "Must be on trunk to release (not '$BRANCH')"
   fi
   
-  if [[ "$TAG" ]]
-  then
-    release="$TAG$CLEAN"
-  else
-    release=$(git describe --tags --dirty=+)
-  fi
-
-  local id="${BRANCH:+$BRANCH-}$release"
 
   # optimise: assume nothing to push implies
   # previous push is tested
@@ -78,21 +70,23 @@ publish_release() {
     # will exit if failed
   #else
 
-  if ! prompt "Release $OLD -> $TAG? [y/n]"
+  local id=$(git describe --tags)
+  if ! prompt "Release $id -> $TAG? [y/n]"
   then
-    fatal Aborting as requested
+    fatal "Aborting as requested"
   fi
 
   git checkout release
   git merge --ff-only
-  git tag "$TAG"
+  git tag -a "$TAG" # -m "$message"
+  git push origin $TAG
   # re-build ? re-test ?
   gulp build
-  publish $STAGING/$id
   publish $LIVE
-  prune_staging
-  git push origin $TAG
   git checkout trunk
+  gulp build
+  publish $STAGING/trunk-$(git describe --tags)
+  prune_staging
   echo Done
 }
 
