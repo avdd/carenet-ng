@@ -85,7 +85,7 @@ publish_release() {
   publish $LIVE
   git checkout trunk
   gulp build
-  publish $STAGING/trunk-$(git describe --tags)
+  publish $STAGING/trunk-$(git describe --tags --long)
   prune_staging
   echo Done
 }
