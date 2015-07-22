@@ -2,33 +2,25 @@
 
 $items = array();
 foreach (scandir('.') as $f) {
-    switch ($f) {
-        case '.':
-        case '..':
-        case 'index.php':
-            break;
-        default:
-            // TODO get tag message
-            // branch type, etc. (also colors..)
-            $items[] = $f;
-    }
+  if (is_dir($f) && $f != '.' && $f != '..')
+    // TODO get tag message, branch type, etc. (colors?)
+    $items[] = $f;
 }
-
+$items=array('first', 'second');
 ?>
 
 
 
 <style>
 * {
-   box-sizing: border-box;
+  box-sizing: border-box;
 }
 body {
-    background-color: #eee;
+  background-color: #eee;
 }
-
 .staging {
     width: 19em;
-    margin: auto;
+    margin: 2em auto;
     -webkit-background-clip: padding-box;
             background-clip: padding-box;
     border: 1px solid #999;
@@ -38,8 +30,10 @@ body {
             box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
     background-color: white;
     padding: 1em;
+    font-size: 13px;
 }
-h4 { text-align: center; }
+h4, .footer { text-align: center; }
+.footer { font-size: x-small; }
 ul {
     list-style: none;
     padding: 0;
@@ -49,7 +43,7 @@ li {
     margin: 0.7ex 0;
     color: #ccc;
 }
-a {
+ul a {
     text-decoration: none;
     display: block;
     padding: 0.5ex 1ex;
@@ -58,17 +52,16 @@ a {
     color: #009;
     background-color: #eee;
 }
-a:hover {
+ul a:hover {
     color:blue;
     animation-duration: 2s;
     animation-name: throbber;
     animation-iteration-count: infinite;
     animation-direction: alternate;
 }
-a span {
+ul a span {
     margin: 0; padding: 0;
     vertical-align: top;
-    font-size: 13px;
 }
 .label {
     text-align: right;
@@ -81,14 +74,25 @@ a span {
         background-color: #fec;
     }
 }
-
 </style>
+
 <div class=staging>
-<h4>Select a version:</h4>
-<ul>
-<?foreach ($items as $f):?>
-    <li><a href=<?= $f ?>/
-        ><span class=key><?= $f ?></span></a>
-<?endforeach;?>
-</ul>
+  <h4>Select a version:</h4>
+
+  <ul>
+  <?foreach ($items as $f):?>
+      <li><a href=<?= $f ?>/
+          ><span class=key><?= $f ?></span></a>
+  <?endforeach;?>
+  </ul>
+
+  <div class=footer>
+    <a href=https://travis-ci.org/avdd/carenet-ng>
+      <img src=https://travis-ci.org/avdd/carenet-ng.svg>
+    </a>
+    <br>
+    <a href=https://github.com/avdd/carenet-ng>source</a>
+  </div>
+
 </div>
+
