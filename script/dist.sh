@@ -155,7 +155,8 @@ publish() {
   if ssh $HOST "test -d $dest"
   then
     exists=1
-    ssh $HOST "test -d $dest_assets || mv -v $dest/assets-* $dest_assets"
+    s="find $dest -maxdepth 1 -name 'assets-*' ! -name $asset_hash -exec mv {} $dest_assets ';'"
+    ssh $HOST "$s"
   else
     ssh $HOST "mkdir $dest"
   fi
