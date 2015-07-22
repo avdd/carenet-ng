@@ -22,6 +22,7 @@ main() {
   OUTGOING=
   CLEAN=
 
+  git fetch -p origin
   git_outgoing && OUTGOING=1
   git_clean && CLEAN=1
 
@@ -38,13 +39,13 @@ main() {
 
 publish_staging() {
   local suffix=$(git describe --tags --dirty=+)
-  ID="$BRANCH$suffix"
+  local id="${BRANCH:+$BRANCH-}$suffix"
 
   if gulp test
   then
     warn_unclean
     git push -u origin $BRANCH
-    publish $STAGING/$ID
+    publish $STAGING/$id
     prune_staging
     warn_unclean
   fi
@@ -67,8 +68,7 @@ publish_release() {
     release=$(git describe --tags --dirty=+)
   fi
 
-  # ${BRANCH:+$BRANCH-}
-  ID="$BRANCH$release$dirty"
+  local id="${BRANCH:+$BRANCH-}$release"
 
   # optimise: assume nothing to push implies
   # previous push is tested
@@ -88,7 +88,7 @@ publish_release() {
   git tag "$TAG"
   # re-build ? re-test ?
   gulp build
-  publish $STAGING/$ID
+  publish $STAGING/$id
   publish $LIVE
   purge_staging
   git push origin $TAG
@@ -126,9 +126,10 @@ git_branch() {
 }
 
 prune_staging() {
+  echo purge
   # delete all older but keep 2 
   # find older | head -n-2
-  list="find $STAGING/* -maxdepth 0 -type d -mtime -2"
+  list="find $STAGING/* -maxdepth 0 -type d -mtime +1"
   # FIXME should use new -V option to sort by version number
   keep2="sort | head -n-2"
   nuke="xargs -r rm -rf"
@@ -146,13 +147,22 @@ publish() {
     fatal "ERROR: clean first"
   fi
 
-  local local_assets=$(basename $DIST/assets-*)
+  local asset_hash=$(basename $DIST/assets-*)
+  local dest_assets=$dest/$asset_hash
+  local exists=
 
   echo "PUBLISH $DIST $HOST:$dest"
-  ssh $HOST "mkdir -p $dest"
+
+  if ssh $HOST "test -d $dest"
+  then
+    exists=1
+    ssh $HOST "test -d $dest_assets || mv -v $dest/assets-* $dest_assets"
+  else
+    ssh $HOST "mkdir $dest"
+  fi
+
   $RSYNC $UPGRADE_HTML $HOST:$dest/$INDEX_HTML
-  $RSYNC -ra --delete $DIST/assets-*/  $HOST:$dest/'assets-*/'
-  ssh $HOST "test -d $assets || mv -v $dest/assets-* $assets"
+  $RSYNC -ra --delete $DIST/assets-*/  $HOST:$dest_assets/
   # $RSYNC -ra --exclude /$INDEX_HTML $DIST/ $HOST:$dest/
   $RSYNC $DIST/$INDEX_HTML $HOST:$dest/$INDEX_HTML
 }
