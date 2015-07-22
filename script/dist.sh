@@ -20,16 +20,16 @@ main() {
   TAG="${1:-}"
   BRANCH=$(git_branch)
   OUTGOING=
-  CLEAN=
+  DIRTY=
 
   git fetch -p origin
   git_outgoing && OUTGOING=1
-  git_clean && CLEAN=1
+  git_dirty && DIRTY=1
 
   if [[ "$TAG" ]]
   then
     publish_release
-  elif [[ "$OUTGOING" ]]
+  elif [[ "$OUTGOING$DIRTY" ]]
   then
     publish_staging
   else
@@ -52,7 +52,7 @@ publish_staging() {
 }
 
 publish_release() {
-  if [[ ! "$CLEAN" ]]; then
+  if [[ "$DIRTY" ]]; then
     error "Must release from clean checkout"
     git status -sb
     fatal
@@ -90,7 +90,7 @@ publish_release() {
   gulp build
   publish $STAGING/$id
   publish $LIVE
-  purge_staging
+  prune_staging
   git push origin $TAG
   git checkout trunk
   echo Done
@@ -102,7 +102,7 @@ prompt() {
 }
 
 warn_unclean() {
-  if [[ ! "$CLEAN" ]]; then
+  if [[ "$DIRTY" ]]; then
     error "\n*** WARNING: unclean ***\n"
     git status -sb
     error
@@ -110,11 +110,11 @@ warn_unclean() {
 }
 
 git_outgoing() {
-  git rev-list --quiet origin/$BRANCH..$BRANCH
+  git rev-list origin/$BRANCH..$BRANCH | grep -q .
 }
 
-git_clean() {
-  git diff --no-ext-diff --quiet --exit-code
+git_dirty() {
+  ! git diff --no-ext-diff --quiet --exit-code
 }
 
 git_tag() {
@@ -126,15 +126,20 @@ git_branch() {
 }
 
 prune_staging() {
-  echo purge
   # delete all older but keep 2 
   # find older | head -n-2
-  list="find $STAGING/* -maxdepth 0 -type d -mtime +1"
-  # FIXME should use new -V option to sort by version number
-  keep2="sort | head -n-2"
-  nuke="xargs -r rm -rf"
-  script="$list | $keep2 | $nuke"
-  ssh $HOST "$script"
+  list="$(ssh $HOST "(cd $STAGING; find * -maxdepth 0 -type d -mtime +1)")"
+  test "$list" || return
+  list="$(echo "$list" | sort -V | head -n-2)"
+  if [[ "$list" ]]
+  then
+    echo prune
+    echo "$list"
+    for d in $list
+    do
+      ssh $HOST "rm -rf $STAGING/$d"
+    done
+  fi
 }
 
 publish() {
@@ -151,7 +156,7 @@ publish() {
   local dest_assets=$dest/$asset_hash
   local exists=
 
-  echo "PUBLISH $DIST $HOST:$dest"
+  echo "PUBLISH $HOST:$dest"
 
   if ssh $HOST "test -d $dest"
   then
