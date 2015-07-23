@@ -9,7 +9,7 @@
   "paths": {
     "client_src":   "src/client",
     "server_src":   "src/server",
-    "client_assets":  "src/assets",
+    "client_assets":  "static",
     "client_test":  "test/client",
     "server_test":  "test/server",
     "ui_test":      "test/ui",
