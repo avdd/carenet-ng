@@ -16,7 +16,7 @@ var gulp = require('gulp')
   ;
 
 task('default', ['browse-devel']);
-task('preview', ['browse-dist']);
+task('dist', ['browse-dist']);
 task('build', ['dist-html']);
 
 task('browse-devel', ['serve-devel'], browseDevel);
