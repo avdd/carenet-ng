@@ -12,6 +12,14 @@ foreach (scandir('.') as $f) {
 ?>
 
 
+<html lang=en>
+<head>
+<title>carenet-ng staging</title>
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
 <style>
 * {
@@ -19,9 +27,10 @@ foreach (scandir('.') as $f) {
 }
 body {
   background-color: #eee;
+  font-family: sans-serif;
 }
 .staging {
-  width: 34em;
+  max-width: 30em;
   margin: 2em auto;
   -webkit-background-clip: padding-box;
           background-clip: padding-box;
@@ -64,10 +73,11 @@ ul a:hover {
 ul a span {
   margin: 0; padding: 0;
   vertical-align: top;
-  width: 48%;
   display: inline-block;
+  width: 60%;
 }
 .right {
+  width: 38%;
   text-align: right;
 }
 @keyframes throbber {
@@ -79,6 +89,9 @@ from {
   }
 }
 </style>
+</head>
+
+<body>
 
 <div class=staging>
   <h4>Select a version:</h4>
