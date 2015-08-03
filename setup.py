@@ -12,10 +12,12 @@ setup(
     packages=['server'],
     zip_safe=False,
     install_requires=[
-        #'flak',
+        'flak==dev',
         'pytest',
         'click>=2.0',
-        'git+git@github.com:avdd/flak.git#egg=Flak
+    ],
+    dependency_links=[
+        'https://github.com/avdd/flak/tarball/master#egg=flak-dev',
     ]
 )
 

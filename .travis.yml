@@ -11,7 +11,8 @@ install:
   - npm install -g bower gulp
   - mkdir .cache
   - bower install
-  - pip install -e .
+  - pip install --process-dependency-links  -e .
+
 
 script: 
   - gulp test
