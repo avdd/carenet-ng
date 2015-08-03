@@ -1,5 +1,6 @@
 
 import json
+import flak
 
 http_info = '''
 path_info
@@ -12,7 +13,13 @@ content_type
 script_name
 '''.split()
 
-def app(environ, start_response):
+app = flak.Flak(__name__)
+
+@app.route('/')
+def home(cx):
+    return 'home'
+
+def wsgi(environ, start_response):
 
     stderr = environ['wsgi.errors']
 
@@ -35,5 +42,5 @@ def app(environ, start_response):
 
 if __name__ == '__main__':
     from wsgiref.handlers import CGIHandler as cgi
-    cgi().run(app)
+    cgi().run(wsgi)
 

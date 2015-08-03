@@ -1,9 +1,12 @@
-# FIXME: environment??
-import sys
-sys.path.insert(0, 'src/server')
 
-import main
+import pytest
+from server import main
 
 def test_trivial():
     assert True == True
+
+def test_flak():
+    c = main.app.test_client()
+    rv = c.get()
+    assert 'home' in rv.data
 
