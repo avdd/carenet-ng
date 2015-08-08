@@ -13,7 +13,6 @@ install:
   - bower install
   - pip install --process-dependency-links  -e .
 
-
 script: 
   - gulp test
 
