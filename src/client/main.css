@@ -2,7 +2,7 @@ h1 {
   color: #060;
 }
 
-#version-notice {
+#global-status {
   background-color: #eee;
   font-weight: bold;
   font-size: small;
@@ -12,23 +12,99 @@ h1 {
   border-bottom: 1px solid;
 }
 
-.staging #version-notice,
-.devel #version-notice {
+#global-status div {
+  display: inline-block;
 }
 
-.devel #version-notice {
+.staging #global-status,
+.devel #global-status {
+}
+
+.devel #global-status {
   color: #999;
   border-color: #999;
   background-color: #eee;
 }
 
-.staging #version-notice {
+.staging #global-status {
   border-color: #900;
   color: #900;
 }
 
-.live #version-notice {
+.live #global-status {
   color: brown;
   border-color: brown;
   background-color: #fe6;
 }
+
+.connection-notice {
+  border: 1px solid #333;
+  padding: 0 0.5ex;
+}
+
+.online .connection-notice {
+  border-color: #090;
+  color: #090;
+}
+
+.offline .connection-notice {
+  border-color: #900;
+  color: #900;
+}
+
+.logout-link {
+  padding-left: 1em;
+}
+body.has-modal {
+  background-color: #999;
+}
+
+.modal {
+  display: block;
+}
+
+.x-modal {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1040;
+  background-color: #999;
+}
+
+.x-modal-dialog {
+  width: 98%;
+  margin: 1ex auto;
+  min-width: 280px;
+}
+
+.x-modal-narrow {
+  margin: 1ex auto;
+  min-width: 280px;
+  max-width: 40%;
+}
+
+.modal-header h4 {
+  margin: 0;
+}
+
+.modal-header h4 small {
+  display: block;
+}
+
+input.form-control,
+textarea.form-control {
+  font-family: monospace;
+}
+
+input.form-control:focus,
+textarea.form-control:focus {
+  background-color: ivory
+}
+
+a[ng-click] {
+  cursor: pointer;
+}
+

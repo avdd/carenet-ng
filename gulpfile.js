@@ -7,11 +7,16 @@ var gulp = require('gulp')
   , path = require('path')
   , del = require('del')
   , Q = require('q')
-  , $ = require('gulp-load-plugins')()
+  , util = require('gulp-util')
+  , replace = require('gulp-replace')
+  , concat = require('gulp-concat')
+  , uglify = require('gulp-uglify')
+  , ngAnnotate = require('gulp-ng-annotate')
+  , templateCache = require('gulp-angular-templatecache')
   , config = getConfig()
   , task = gulp.task.bind(gulp)
   , watch = gulp.watch.bind(gulp)
-  , log = $.util.log
+  , log = util.log
   , serverInstance = null
   ;
 
@@ -50,8 +55,8 @@ task('git-clean', gitClean);
 
 task('serve-spec', ['dist-html'], serveSpec);
 task('serve-dist', ['dist-html'], serveDist);
-task('dist-html', ['git-id', 'initjs-dist'], distHtml);
-task('initjs-dist', ['dist-hash'], initJsDist);
+task('dist-html', ['git-id', 'dist-manifest'], distHtml);
+task('dist-manifest', ['dist-hash'], distManifest);
 task('dist-hash', ['dist-assets'], distHash);
 task('dist-assets', ['app-css', 'app-js', 'app-misc',
                      'vendor-css', 'vendor-js', 'vendor-misc']);
@@ -175,13 +180,14 @@ function watchClientTests() {
 function startKarma(args, done) {
   var karma_conf = './' + config.files.karma_conf;
   args.configFile = path.resolve(karma_conf);
-  require('karma').server.start(args, done);
+  var Server = require('karma').Server;
+  (new Server(args, done)).start()
 }
 
 function runApiTests() {
 
   var exec = require('child_process').exec
-    , color = $.util.colors.supportsColor
+    , color = util.colors.supportsColor
     , pytest = config.paths.python + '/bin/py.test'
     , tests = config.server_test
     , cmd = [pytest, color ? ' --color=yes ' : '',
@@ -260,6 +266,7 @@ function makeDevelInitJs(out) {
   var merge = require('merge-stream');
   var data = {
         devel: true
+      , channel: 'devel'
       , version: config.gitId
       , js: config.vendor_js
       , css: config.vendor_css
@@ -283,58 +290,85 @@ function makeDevelInitJs(out) {
 
   function end() {
     return through.obj(null, null, function (cb) {
-      this.push(makeInitJs(data));
+      var out = new util.File({
+        path: config.files.initjs,
+        contents: new Buffer(initJs(data))
+      });
+      this.push(out);
       cb();
     });
   }
-
 }
 
-function initJsDist() {
+function distManifest() {
   if (!config.assetHash)
     throw new Error('missing asset hash');
+  var manifest = [];
+
+  return gulp.src(path.join(config.out.hash, '**'), {read:false})
+             .pipe(through.obj(In))
+             .pipe(through.obj(null, null, Out))
+             .pipe(gulp.dest(config.out.dist));
+
+  function In(f, _, cb) {
+    if (f.stat.isFile())
+      manifest.push(config.assetHash + '/' + f.relative);
+    cb();
+  }
+  function Out(cb) {
+    var manifestData = (
+      'CACHE MANIFEST\n#'
+      + config.gitId + Math.random()
+      + '\n'
+      + manifest.join('\n')
+      + '\nNETWORK:\n*\n'
+    );
+    var out = new util.File({
+      path: config.files.cache_manifest,
+      contents: new Buffer(manifestData)
+    });
+    this.push(out);
+    cb();
+  }
+}
+
+function initJsDist(hash, channel, version) {
   var js = [config.files.vendorjs, config.files.appjs]
     , css = [config.files.vendorcss, config.files.appcss]
     , data = {
         devel: false
-      , js: prefixed(config.assetHash, js)
-      , css: prefixed(config.assetHash + '/css', css)
+      , channel: channel
+      , version: version
+      , js: prefixed(hash, js)
+      , css: prefixed(hash + '/css', css)
       };
-  return Source(makeInitJs(data))
-            .pipe(gulp.dest(config.out.hash));
+  return initJs(data);
 }
 
-function Source(file) {
-  var s = through.obj(function(file, _, cb) {
-    this.push(file);
-    return cb();
-  });
-  s.write(file);
-  s.end();
-  return s;
-}
-
-function makeInitJs(data) {
-  var script = '\nINIT(' + JSON.stringify(data) + ');\n';
-  return new $.util.File({
-    path: config.files.initjs,
-    contents: new Buffer(script)
-  });
+function initJs(data) {
+  return '\nINIT(' + JSON.stringify(data) + ');\n';
 }
 
 function distHtml() {
   if (!config.assetHash)
     throw new Error('missing asset hash');
-  var initjs = config.assetHash + '/' + config.files.initjs;
-  var series = (config.gitBranch == 'release'
-                ? 'live'
-                : 'staging')
-  var bodyTag = '<body class=' + series + '>';
+  if (!config.gitId)
+    throw new Error('missing git ID');
+  var channel = (config.gitBranch == 'release'
+                    ? 'live'
+                    : 'staging'),
+      initjs = ' src=init.js>',
+      initjsReplace = '>' + initJsDist(config.assetHash,
+                                       channel,
+                                       config.gitId),
+      iconpath = 'misc/power',
+      iconpathReplace = config.assetHash + '/misc/power',
+      html = '<html ',
+      htmlReplace = '<html manifest=' + config.files.cache_manifest + ' ';
   return gulp.src(config.client_html)
-    .pipe($.replace(config.files.initjs, initjs))
-    .pipe($.replace('misc/power', config.assetHash + '/misc/power'))
-    .pipe($.replace('<body class=devel>', bodyTag))
-    .pipe($.replace('__VERSION__', config.gitId))
+    .pipe(replace(initjs, initjsReplace))
+    .pipe(replace(iconpath, iconpathReplace))
+    .pipe(replace(html, htmlReplace))
     .pipe(gulp.dest(config.out.dist));
 }
 
@@ -348,9 +382,9 @@ function distAppJs() {
   var merge = require('merge-stream');
   var templates = ngTemplateStream();
   return merge(gulp.src(config.client_js), templates)
-          .pipe($.ngAnnotate())
-          .pipe($.concat(config.files.appjs))
-          .pipe($.uglify())
+          .pipe(ngAnnotate())
+          .pipe(concat(config.files.appjs))
+          .pipe(uglify())
           .pipe(gulp.dest(config.out.assets));
 }
 
@@ -360,7 +394,7 @@ function ngTemplateStream() {
     standalone: true
   };
   return gulp.src(config.client_templates)
-              .pipe($.angularTemplatecache(args))
+              .pipe(templateCache(args))
 }
 
 function distAppMisc() {
@@ -370,13 +404,13 @@ function distAppMisc() {
 
 function distVendorCss() {
   return gulp.src(config.min_css)
-              .pipe($.concat(config.files.vendorcss))
+              .pipe(concat(config.files.vendorcss))
               .pipe(gulp.dest(config.out.css));
 }
 
 function distVendorJs() {
   return gulp.src(config.min_js)
-              .pipe($.concat(config.files.vendorjs))
+              .pipe(concat(config.files.vendorjs))
               .pipe(gulp.dest(config.out.assets));
 }
 
@@ -518,7 +552,7 @@ function openBrowser() {
 function logChange(event) {
   var cwd = process.cwd()
     , path = event.path.replace(cwd + '/', '')
-    , C = $.util.colors
+    , C = util.colors
     , map = { changed: C.blue
             , added: C.yellow
             , deleted: C.red
@@ -574,15 +608,15 @@ function browseDevel(done) {
 }
 
 function cleanDist(done) {
-  del(config.out.dist, done);
+  return del(config.out.dist);
 }
 
 function cleanTest(done) {
-  del(config.out.test, done);
+  return del(config.out.test);
 }
 
 function cleanDevel(done) {
-  del(config.out.devel, done);
+  return del(config.out.devel);
 }
 
 function runProtractor(tests) {
@@ -590,6 +624,8 @@ function runProtractor(tests) {
   var args = ['--baseUrl',
               'http://localhost:' + config.ports.test,
               '--directConnect', 'true',
+              // '--browser.ignoreSynchronization', 'true',
+              // '--framework', 'jasmine2',
               '--browser', config.browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
@@ -651,7 +687,7 @@ function assetMin(ext, l) {
 }
 
 function passfail(passed) {
-  var C = $.util.colors;
+  var C = util.colors;
   log(passed
         ? C.bgGreen('PASS')
         : C.bgRed('FAIL'));

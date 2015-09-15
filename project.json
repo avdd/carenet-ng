@@ -30,6 +30,7 @@
     "protractor_conf":"protractor.conf.js",
     "python_main":    "main.py",
     "favicon":        "favicon.ico",
+    "cache_manifest": "manifest.appcache",
     "initjs":         "init.js",
     "appjs":          "app.js",
     "appcss":         "app.css",
@@ -63,7 +64,8 @@
       "jquery/dist/jquery.js",
       "angular/angular.js",
       "angular-route/angular-route.js",
-      "angular-bootstrap/ui-bootstrap-tpls.js"
+      "angular-bootstrap/ui-bootstrap-tpls.js",
+      "localforage/dist/localforage.js"
     ],
     "other": {
       "bootstrap/dist": [

@@ -8,6 +8,7 @@ DEST="~/public_html/carenet-ng"
 DIST="$ROOT/.run/carenet-gulp-tmp/dist"
 UPGRADE_HTML="$ROOT/src/client/upgrading.html"
 INDEX_HTML=index.html
+MANIFEST=manifest.appcache
 LIVE="$DEST/live"
 STAGING="$DEST/staging"
 RSYNC="rsync -v"
@@ -161,7 +162,8 @@ publish() {
   $RSYNC $UPGRADE_HTML $HOST:$dest/$INDEX_HTML
   $RSYNC -ra --delete $DIST/assets-*/  $HOST:$dest_assets/
   # $RSYNC -ra --exclude /$INDEX_HTML $DIST/ $HOST:$dest/
-  $RSYNC $DIST/$INDEX_HTML $HOST:$dest/$INDEX_HTML
+  $RSYNC $DIST/$INDEX_HTML $DIST/$MANIFEST \
+         $HOST:$dest/
 }
 
 error() {

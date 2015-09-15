@@ -21,6 +21,16 @@ afterEach(function () {
 });
 
 describe('Main view', function() {
+  it('shows login', function() {
+    view('main');
+    expect(url()).toBe('/form/login');
+    // already set in DEVEL mode
+    // element(by.model('self.form_data.username')).sendKeys('test');
+    // element(by.model('self.form_data.password')).sendKeys('test');
+    element(by.tagName('form')).submit();
+    expect(url()).toBe('/view/main');
+  });
+
   it('should say hello', function() {
     view('main');
     expect(url()).toContain('/view/main');

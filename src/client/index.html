@@ -73,25 +73,13 @@ body {
   animation-name: loading-box-throbber;
   animation-iteration-count: infinite;
 }
-#loading-progress-outer {
-  margin-top: 1ex;
-  height: 1ex;
-  background-color: #eee;
-  border: 1px solid #ccc;
-  border-radius: 2px;
-}
-#loading-progress-inner {
-  width: 0;
-  height: 100%;
-  background-color: gold;
-}
 </style>
 
 </head>
 
-<body class=devel>
+<body ng-class="root.bodyClass" ng-controller="RootCtrl as root">
 
-<div id=loading-box zz-remove>
+<div id=loading-box disappear>
 <div id=loading-box-inner>
 <img src="data:image/gif;base64,
 R0lGODlhGAAYAOfiAABIlgBJlgBKlwBMlwBMmABNmABOmQBOmgBPmQBPmgBQmgBRmwFSmwJSmwNT
@@ -122,14 +110,21 @@ AIugxl4NKls+nKDHLIHWlCD5O7BMgNGjFRTQYEugHgLEBlba4UA0bMsdgglMBcHKsDYXAvj+rSDB
 gz1/IU1oIEFAgt+jDww4cuovHAYJFDssZy6AhSpsNDGxKRLBglcHCeKLby7CDc2FQgbFEpVoDpUj
 OZiAwhe43LdQFtoQxM00zSCDjDciRSZQQAA7">
 <p> Loading...
-  <div id=loading-progress-outer>
-    <div id=loading-progress-inner>
-    </div></div>
 </div></div>
 
-<div id=version-notice>__VERSION__</div>
+<div id=global-status>
+  version: <span ng-bind=root.version></span>
+  <span class=connection-notice>
+    connection: <span ng-bind=root.connectionStatus></span>
+  </span>
+  <span class=logout-link>
+    <a id=logout-link ng-click="root.logout()">logout</a>
+  </span>
+</div>
+
 <div class=main-container ng-view></div>
 <div main-menu></div>
+
 <script>
 var timelog = (function () {
   var start = Date.now();
@@ -142,30 +137,18 @@ var timelog = (function () {
 
 (function () {
 
-  function loadAssets(css, js, onupdate, done) {
-    var itemsLoaded = 0,
-        totalItems = 0;
+  function loadAssets(css, js, done) {
+    var total = css.length + js.length,
+        loaded = 0;
 
-    setTimeout(start, 10);
-
-    function start() {
-      add(addCss, css);
-      add(addJs, js);
-      check();
-    }
-
-    function add(f, items) {
-      totalItems += items.length;
-      var i;
-      for (i=0; i<items.length; ++i)
-        f(items[i]);
-    }
+    css.map(addCss);
+    js.map(addJs);
 
     function addCss(url) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
       el.href = url;
-      el.onload=function() { tally(url) };
+      el.onload=tally;
       document.head.appendChild(el);
     }
 
@@ -173,47 +156,70 @@ var timelog = (function () {
       var el = document.createElement('script');
       el.async = false;
       el.src = url;
-      el.onload=function() { tally(url) };
+      el.onload=tally;
       document.head.appendChild(el);
     }
 
-    function tally(url) {
-      itemsLoaded = Math.floor(itemsLoaded)+1;
-      updateProgress(url);
+    function tally() {
+      if (++loaded >= total)
+        done();
+    }
+  }
+
+  function useAppCache(ready) {
+
+    var noAppCacheTimeout = setTimeout(noAppCache, 2000);
+    var C = window.applicationCache;
+    C.ondownloading = ondownloading;
+    C.onobsolete = onobsolete;
+    C.onerror = onerror;
+    C.onchecking = onCheck;
+    C.oncached = C.onnoupdate = cacheReady;
+    C.onupdateready = updateReady;
+
+    function onCheck() {
+      clearTimeout(noAppCacheTimeout);
     }
 
-    function updateProgress(url) {
-      onupdate(itemsLoaded, totalItems, url);
+    function noAppCache() {
+      alert('Application Cache required');
     }
 
-    function check() {
-      var next = check,
-          incr = 0.05;
-      if (itemsLoaded >= totalItems)
-        next = done;
-      else if (itemsLoaded + incr < Math.floor(itemsLoaded) + 1) 
-        itemsLoaded += incr;
-      updateProgress();
-      setTimeout(next, 10);
+    function cacheReady() {
+      timelog('cache ready');
+      ready();
     }
 
+    function updateReady() {
+      window.location.reload();
+    }
+
+    function ondownloading() {
+      timelog('appcache downloading');
+    }
+
+    function onobsolete() {
+      timelog('appcache obsolete');
+      window.location.reload();
+    }
+
+    function onerror(e) {
+      timelog('appcache error');
+      window.location.reload();
+    }
   }
 
   window.INIT = function INIT(args) {
     window.CONFIG = args;
-    if (args.version)
-      document.getElementById('version-notice').innerHTML = args.version;
     document.getElementById('loading-box-inner').style.display = 'block';
-    return loadAssets(args.css, args.js, progress, done, timelog);
 
-    function progress(loaded, total, item) {
-      if (total == 0)
-        return;
-      if (item)
-        timelog('loaded ' + loaded + '/' + total + ': ' + item);
-      var percent = Math.round(loaded / total * 100);
-      document.getElementById('loading-progress-inner')
-              .style.width = percent + '%';
+    if (args.devel)
+      load();
+    else
+      useAppCache(load);
+
+    function load() {
+      loadAssets(args.css, args.js, done);
     }
 
     function done() {
@@ -224,9 +230,7 @@ var timelog = (function () {
 })();
 </script>
 
-<!-- build:init -->
 <script src=init.js></script>
-<!-- endbuild -->
 
 </body>
 </html>

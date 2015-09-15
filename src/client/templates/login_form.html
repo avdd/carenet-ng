@@ -1,0 +1,127 @@
+
+<div class="x-modal">
+  <div class="x-modal-dialog x-modal-narrow">
+    <div class="modal-content">
+
+      <div class="modal-header">
+          <div class=row>
+            <div class="col-xs-10 col-xs-offset-1">
+              <h4>
+                carenet-ng login
+              </h4>
+            </div>
+          </div>
+      </div>
+
+      <div class="modal-body">
+        <form name=form novalidate
+              autocomplete=off
+              ng-submit="self.submit()">
+
+          <div
+               class="row
+                      {{item.form_class}}
+                      item_{{item.id}}">
+
+            <div class="col-xs-1 control-label">
+            </div>
+
+            <div class="col-xs-10 col-sm-8">
+
+              <div class=row>
+
+                <label class="control-label col-{{self.form_break}}-3">
+                  <span>Username</span>
+                </label>
+
+                <div class="col-{{self.form_break}}-9">
+                  <input class="form-control"
+                         autofocus
+                         tabindex="{{$index+1}}"
+                         ng-model="self.form_data.username"
+                         ng-change="self.changed()"
+                         ng-minlength="2" >
+
+                  <div class="validation-message control-label"
+                       ng-bind="item.validation_message">
+                  </div>
+                </div>
+
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+
+          </div>
+
+          <hr>
+
+          <div
+               class="row
+                      {{item.form_class}} item_{{item.id}}">
+
+            <div class="col-xs-1 control-label">
+            </div>
+
+            <div class="col-xs-10 col-sm-8">
+
+              <div class=row>
+
+                <label class="control-label col-{{self.form_break}}-3">
+                  <span>Password</span>
+                </label>
+
+                <div class="col-{{self.form_break}}-9">
+                  <input class="form-control"
+                         tabindex="{{$index+1}}"
+                         type=password
+                         autocomplete=off
+                         ng-model="self.form_data.password"
+                         ng-change="self.changed()"
+                         ng-minlength="2" >
+
+                  <div class="validation-message control-label"
+                       ng-bind="item.validation_message">
+                  </div>
+                </div>
+
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+
+          </div>
+
+          <hr>
+
+
+
+          <div class="row">
+
+            <div class="col-xs-8 col-xs-offset-1">
+              <div class=row>
+                <div class="col-{{self.form_break}}-2
+                            col-{{self.form_break}}-offset-3">
+
+                  <button class="btn btn-xblock btn-primary"
+                          tabindex=1000
+                          ng-disabled="!self.submittable"
+                          >
+                      Login
+                  </button>
+
+                </div>
+
+                <div class="col-{{self.form_break}}-7">
+                  <div class="validation-message"
+                       ng-bind="self.form_message"
+                       ng-show="self.form_message">
+                  </div>
+                </div>
+
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+          </div> <!-- /row -->
+
+        </form>
+      </div> <!-- /modal-body -->
+    </div> <!-- /modal-content -->
+  </div> <!-- /modal-dialog -->
+</div> <!-- /modal-->
+

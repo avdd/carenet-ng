@@ -35,7 +35,8 @@ module.exports = function(config) {
     singleRun: true,
 
     frameworks: ['jasmine'],
-    reporters: reporters.concat(['progress', 'coverage']),
+    // reporters: reporters.concat(['progress', 'coverage']),
+    reporters: reporters.concat(['coverage']),
 
     port: project.ports.karma,
 
