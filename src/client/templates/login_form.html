@@ -19,9 +19,7 @@
               ng-submit="self.submit()">
 
           <div
-               class="row
-                      {{item.form_class}}
-                      item_{{item.id}}">
+            class="row">
 
             <div class="col-xs-1 control-label">
             </div>
@@ -37,14 +35,9 @@
                 <div class="col-{{self.form_break}}-9">
                   <input class="form-control"
                          autofocus
-                         tabindex="{{$index+1}}"
+                         tabindex=1
                          ng-model="self.form_data.username"
-                         ng-change="self.changed()"
-                         ng-minlength="2" >
-
-                  <div class="validation-message control-label"
-                       ng-bind="item.validation_message">
-                  </div>
+                         >
                 </div>
 
               </div> <!-- /row -->
@@ -54,9 +47,7 @@
 
           <hr>
 
-          <div
-               class="row
-                      {{item.form_class}} item_{{item.id}}">
+          <div class="row">
 
             <div class="col-xs-1 control-label">
             </div>
@@ -71,16 +62,11 @@
 
                 <div class="col-{{self.form_break}}-9">
                   <input class="form-control"
-                         tabindex="{{$index+1}}"
+                         tabindex=2
                          type=password
                          autocomplete=off
                          ng-model="self.form_data.password"
-                         ng-change="self.changed()"
-                         ng-minlength="2" >
-
-                  <div class="validation-message control-label"
-                       ng-bind="item.validation_message">
-                  </div>
+                         >
                 </div>
 
               </div> <!-- /row -->
@@ -101,9 +87,8 @@
 
                   <button class="btn btn-xblock btn-primary"
                           tabindex=1000
-                          ng-disabled="!self.submittable"
                           >
-                      Login
+                      Log in
                   </button>
 
                 </div>

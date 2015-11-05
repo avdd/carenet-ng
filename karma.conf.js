@@ -9,12 +9,22 @@ function prefixed(prefix, items) {
   });
 }
 
+function readFile(fn) {
+  var read = require('fs').readFileSync
+    , opts = {encoding: 'utf-8'};
+  return read(fn, opts);
+}
+
+function loadJson(fn) {
+  return JSON.parse(readFile(fn));
+}
+
 module.exports = function(config) {
 
-  var project = require('./project.json')
-
-    , vendor_js = prefixed(project.paths.vendor_src, project.vendor.js)
-    , extra_js = prefixed(project.paths.vendor_src, project.test.js)
+  var project = loadJson('./project.json')
+    , bower = loadJson('./.bowerrc')
+    , vendor_js = prefixed(bower.directory, project.vendor.js)
+    , extra_js = prefixed(bower.directory, project.test.js)
     , app_js = prefixed(project.paths.client_src, project.files.client_js)
     , test_js = prefixed(project.paths.client_test, project.files.client_test)
     , files = vendor_js.concat(extra_js, test_js, app_js)
@@ -23,7 +33,7 @@ module.exports = function(config) {
 
   coverage[app_js] = ['coverage'];
 
-  var reporters = [];
+  var reporters = ['progress', 'coverage'];
 
   if (process.env['DESKTOP_SESSION'] == 'ubuntu')
       reporters.push('osd-notifier');
@@ -35,9 +45,7 @@ module.exports = function(config) {
     singleRun: true,
 
     frameworks: ['jasmine'],
-    // reporters: reporters.concat(['progress', 'coverage']),
-    reporters: reporters.concat(['coverage']),
-
+    reporters: reporters,
     port: project.ports.karma,
 
     browsers: [

@@ -38,7 +38,10 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   width: 100%;
   height: 100%;
+  /*/
   background-color: #ddd;
+  opacity: 0.5;
+  /*/
 }
 #loading-box img {
   vertical-align: middle;
@@ -73,13 +76,26 @@ body {
   animation-name: loading-box-throbber;
   animation-iteration-count: infinite;
 }
+#loading-progress-outer {
+  visibility: hidden;
+  margin-top: 1ex;
+  height: 1ex;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+}
+#loading-progress-inner {
+  width: 0;
+  height: 100%;
+  background-color: gold;
+}
 </style>
 
 </head>
 
-<body ng-class="root.bodyClass" ng-controller="RootCtrl as root">
+<body ng-class="root.bodyClass">
 
-<div id=loading-box disappear>
+<div id=loading-box remove-on-load>
 <div id=loading-box-inner>
 <img src="data:image/gif;base64,
 R0lGODlhGAAYAOfiAABIlgBJlgBKlwBMlwBMmABNmABOmQBOmgBPmQBPmgBQmgBRmwFSmwJSmwNT
@@ -110,27 +126,27 @@ AIugxl4NKls+nKDHLIHWlCD5O7BMgNGjFRTQYEugHgLEBlba4UA0bMsdgglMBcHKsDYXAvj+rSDB
 gz1/IU1oIEFAgt+jDww4cuovHAYJFDssZy6AhSpsNDGxKRLBglcHCeKLby7CDc2FQgbFEpVoDpUj
 OZiAwhe43LdQFtoQxM00zSCDjDciRSZQQAA7">
 <p> Loading...
+  <div id=loading-progress-outer>
+    <div id=loading-progress-inner>
+  </div></div>
 </div></div>
 
 <div id=global-status>
-  version: <span ng-bind=root.version></span>
-  <span class=connection-notice>
-    connection: <span ng-bind=root.connectionStatus></span>
-  </span>
-  <span class=logout-link>
-    <a id=logout-link ng-click="root.logout()">logout</a>
-  </span>
+  <span ng-bind=version></span>
 </div>
 
 <div class=main-container ng-view></div>
 <div main-menu></div>
+<pre id=log></pre><!-- remove -->
 
 <script>
 var timelog = (function () {
   var start = Date.now();
   return function log(msg) {
     var t = Date.now() - start;
-    console.warn('[' + t + '] ' + msg);
+    // msg = '[' + t + '] ' + msg;
+    console.warn(msg);
+    document.getElementById('log').innerHTML += msg + '\n';
   }
 
 })();
@@ -138,17 +154,23 @@ var timelog = (function () {
 (function () {
 
   function loadAssets(css, js, done) {
-    var total = css.length + js.length,
-        loaded = 0;
 
-    css.map(addCss);
-    js.map(addJs);
+    next();
+
+    function next() {
+      if (css.length)
+        addCss(css.shift());
+      else if (js.length)
+        addJs(js.shift());
+      else
+        done();
+    }
 
     function addCss(url) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
       el.href = url;
-      el.onload=tally;
+      el.onload = next;
       document.head.appendChild(el);
     }
 
@@ -156,57 +178,156 @@ var timelog = (function () {
       var el = document.createElement('script');
       el.async = false;
       el.src = url;
-      el.onload=tally;
+      el.onload = next;
       document.head.appendChild(el);
     }
 
-    function tally() {
-      if (++loaded >= total)
-        done();
-    }
   }
 
-  function useAppCache(ready) {
+  function useAppCache(updateProgress, onReady, notifyUpdate) {
 
-    var noAppCacheTimeout = setTimeout(noAppCache, 2000);
-    var C = window.applicationCache;
-    C.ondownloading = ondownloading;
-    C.onobsolete = onobsolete;
-    C.onerror = onerror;
-    C.onchecking = onCheck;
-    C.oncached = C.onnoupdate = cacheReady;
-    C.onupdateready = updateReady;
+    // (FF/chrome) appcache events are sent to all tabs using that cache
 
-    function onCheck() {
+    var C = window.applicationCache,
+        noAppCacheTimeout = setTimeout(warnNoAppCache, 5000),
+        handleError = errorHandlerUnset,
+        recheckTimeout = null,
+        downloadCount = null,
+        starting = true,
+        updating = true;
+
+    C.onchecking = function onChecking() {
+      timelog('[appcache checking] - ' + (updating ? 'this' : 'other'));
       clearTimeout(noAppCacheTimeout);
+      clearTimeout(recheckTimeout);
+      handleError = checkingError;
+      downloadCount = 0;
+      if (starting)
+        updateProgress(0); // start the progress meter
     }
 
-    function noAppCache() {
-      alert('Application Cache required');
-    }
-
-    function cacheReady() {
-      timelog('cache ready');
+    C.onnoupdate = function onNoUpdate() {
+      timelog('[appcache noupdate]');
       ready();
     }
 
-    function updateReady() {
-      window.location.reload();
+    C.ondownloading = function onDownloading() {
+      timelog('[appcache downloading]');
+      handleError = downloadingError;
     }
 
-    function ondownloading() {
-      timelog('appcache downloading');
+    C.onprogress = function onProgress(e) {
+      downloadCount++;
+      timelog('[appcache progress] ' + downloadCount);
+      if (starting)
+        updateProgress(downloadCount);
     }
 
-    function onobsolete() {
-      timelog('appcache obsolete');
-      window.location.reload();
+    C.oncached = function onCached() {
+      timelog('[appcache cached]');
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent))
+        reload(); // iOS doesn't double-check the manifest
+      else
+        ready();
     }
 
-    function onerror(e) {
-      timelog('appcache error');
-      window.location.reload();
+    C.onupdateready = function onUpdateReady() {
+      timelog('[appcache updateready]');
+      if (starting)
+        reload();
+      else
+        notify();
     }
+
+    C.onobsolete = function onObsolete() {
+      timelog('[appcache obsolete]');
+      if (starting)
+        reload();
+      else
+        notify();
+    }
+
+    C.onerror = function onError(e) {
+      timelog('[appcache error] status=' + status());
+      handleError(e);
+    }
+
+    function checkingError(e) {
+      console.log(e);
+      timelog('checking error: assuming OFFLINE');
+      ready();
+    }
+
+    function downloadingError(e) {
+      timelog('downloading error: assuming concurrent update');
+      // console.log(e);
+      if (starting)
+        reload();
+      else if (updating)
+        setTimeout(checkManifest, 200);
+      else
+        timelog('download error NOP');
+    }
+
+    function errorHandlerUnset(e) {
+      console.log(e);
+      throw new Error('no error handler');
+    }
+
+    function scheduleRecheck() {
+      var checkInterval = 5000;
+      // var checkInterval = 60000;
+      recheckTimeout = setInterval(checkManifest, checkInterval);
+    }
+
+    function checkManifest() {
+      updating = true;
+      C.update();
+    }
+
+    function ready() {
+      updating = false;
+      scheduleRecheck();
+      if (starting)
+        finishStartup();
+    }
+
+    function finishStartup() {
+      starting = false;
+      updateProgress(999999);
+      onReady();
+    }
+
+    function notify() {
+      notifyUpdate();
+      scheduleRecheck();
+    }
+
+    function reload() {
+      timelog('[reloading...]');
+      if (starting)
+        // window.location.reload(true);
+        setTimeout(function(){window.location.reload(true)}, 1000);
+      else
+        throw new Error('[already loaded]');
+    }
+
+    function status() {
+      switch (C.status) {
+        case C.UNCACHED:    return 'UNCACHED';
+        case C.IDLE:        return 'IDLE';
+        case C.CHECKING:    return 'CHECKING';
+        case C.DOWNLOADING: return 'DOWNLOADING';
+        case C.UPDATEREADY: return 'UPDATEREADY';
+        case C.OBSOLETE:    return 'OBSOLETE';
+        default:            return 'UNKNOWN';
+      }
+    }
+
+    function warnNoAppCache() {
+      console.log('Application Cache required');
+    }
+
   }
 
   window.INIT = function INIT(args) {
@@ -214,17 +335,36 @@ var timelog = (function () {
     document.getElementById('loading-box-inner').style.display = 'block';
 
     if (args.devel)
-      load();
+      onReady();
     else
-      useAppCache(load);
+      useAppCache(onProgress, onReady, notifyUpdate);
 
-    function load() {
+    function onProgress(count) {
+      if (count === 0)
+        return document.getElementById('loading-progress-outer')
+                       .style.visibility = 'visible';
+      var total = args.assetCount + 1;
+      if (count > total)
+        count = total;
+      var percent = Math.round(count / total * 100);
+      document.getElementById('loading-progress-inner')
+              .style.width = percent + '%';
+    }
+
+    function onReady() {
       loadAssets(args.css, args.js, done);
     }
 
     function done() {
       angular.bootstrap(document, [args.app], {strictDi: !args.devel});
     }
+
+    function notifyUpdate() {
+      timelog('NOTIFY UPDATE');
+      if (window.CONFIG.onappcacheupdate)
+        window.CONFIG.onappcacheupdate();
+    }
+
   }
 
 })();

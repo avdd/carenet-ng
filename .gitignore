@@ -1,4 +1,6 @@
 .cache
-.run
-node_modules
+.vagrant
+gulp
 misc
+node_modules
+*.egg-info

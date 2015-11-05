@@ -2,15 +2,18 @@
 'use strict';
 
 var gulp = require('gulp')
-  , runSequence = require('run-sequence')
-  , through = require('through2')
-  , path = require('path')
-  , del = require('del')
   , Q = require('q')
+  , del = require('del')
+  , path = require('path')
+  , through = require('through2')
+  , childProc = require('child_process')
+  , mergeStream = require('merge-stream')
+  , runSequence = require('run-sequence')
   , util = require('gulp-util')
   , replace = require('gulp-replace')
   , concat = require('gulp-concat')
   , uglify = require('gulp-uglify')
+  , minify = require('gulp-minify-css')
   , ngAnnotate = require('gulp-ng-annotate')
   , templateCache = require('gulp-angular-templatecache')
   , config = getConfig()
@@ -22,45 +25,65 @@ var gulp = require('gulp')
 
 task('default', ['browse-devel']);
 task('dist', ['browse-dist']);
-task('build', ['dist-html']);
 
 task('browse-devel', ['serve-devel'], browseDevel);
 task('browse-dist', ['serve-dist'], browseDist);
 
+
 task('test', function allTests() {
   return runSequence('test-client',
                      'test-api',
-                     'test-ui',
+                     // 'test-ui',
                      'test-spec');
 });
+
+
+// task('build', ['dist-html']);
+
+// task('git-branch', gitBranch);
+// task('git-revision', gitRevision);
+// task('git-is-clean', gitIsClean);
+// task('git-id', ['git-branch', 'git-revision', 'git-is-clean'], gitId);
+
+task('version-tag', versionTag)
 
 
 task('test-client', runClientTests);
 task('test-client-watch', watchClientTests);
 task('test-api', runApiTests);
 task('test-api-watch', watchApiTests);
-task('test-ui', ['update-webdriver', 'serve-test'], runUiTests);
+task('test-ui', ['update-webdriver', 'serve-uitest'], runUiTests);
 task('test-spec', ['update-webdriver', 'serve-spec'], runSpecTests);
+task('test-vagrant', ['update-webdriver'], //, 'html-livesim'],
+     // vagrant up, wait, publish ??!!
+     runSpecTestsVagrant);
 
-task('serve-test', ['initjs-test'], serveTest);
-task('initjs-test', ['clean-test'], initJsTest);
+
+
+task('initjs-devel', ['version-tag', 'clean-devel'], initJsDevel);
+task('initjs-uitest', ['version-tag', 'clean-test'], initJsUiTest);
 task('serve-devel', ['initjs-devel'], serveDevel);
-task('initjs-devel', ['git-id', 'clean-devel'], initJsDevel);
+task('serve-uitest', ['initjs-uitest'], serveUiTest);
+task('serve-spec', ['html-staging'], serveSpec);
+task('serve-dist', ['html-dist'], serveDist);
 
-task('git-id', ['git-branch', 'git-revision', 'git-clean'], gitId);
+function htmlTask(channel, api) {
+  return function () {
+    generateIndexHtml(channel, api);
+  }
+}
 
-task('git-branch', gitBranch);
-task('git-revision', gitRevision);
-task('git-clean', gitClean);
+task('html-dist', ['manifest'], htmlTask('dist-local', 'cgi'));
+task('html-staging', ['manifest'], htmlTask('staging', 'cgi'));
+task('html-livesim', ['manifest'], htmlTask('livesim', 'daemon'));
+task('html-live', ['manifest'], htmlTask('live', 'daemon'));
 
-task('serve-spec', ['dist-html'], serveSpec);
-task('serve-dist', ['dist-html'], serveDist);
-task('dist-html', ['git-id', 'dist-manifest'], distHtml);
-task('dist-manifest', ['dist-hash'], distManifest);
-task('dist-hash', ['dist-assets'], distHash);
-task('dist-assets', ['app-css', 'app-js', 'app-misc',
-                     'vendor-css', 'vendor-js', 'vendor-misc']);
+task('manifest', ['version-tag', 'asset-hash', 'online.txt'], distManifest);
+task('asset-hash', ['assets'], assetHash);
+task('assets', ['app-css', 'app-js', 'app-misc',
+                'vendor-css', 'vendor-js', 'vendor-misc']);
 
+task('online.txt', ['clean-dist'], distOnline);
 task('app-css', ['clean-dist'], distAppCss);
 task('app-js', ['clean-dist'], distAppJs);
 task('app-misc', ['clean-dist'], distAppMisc);
@@ -68,9 +91,9 @@ task('vendor-css', ['clean-dist'], distVendorCss);
 task('vendor-js', ['clean-dist'], distVendorJs);
 task('vendor-misc', ['clean-dist'], distVendorMisc);
 
-task('clean', ['clean-dist', 'clean-test', 'clean-devel']);
+task('clean', ['clean-dist', 'clean-uitest', 'clean-devel']);
 task('clean-dist', cleanDist);
-task('clean-test', cleanTest);
+task('clean-uitest', cleanUiTest);
 task('clean-devel', cleanDevel);
 
 task('update-webdriver', updateWebdriver);
@@ -79,6 +102,7 @@ task('update-webdriver', updateWebdriver);
 
 function getConfig() {
   var config = loadJson('project.json'),
+      bower = loadJson('.bowerrc'), 
       cp = config.paths,
       map = [
         // config.Y =
@@ -100,50 +124,50 @@ function getConfig() {
                             config.files[name]);
   });
 
+  cp.vendor_src = bower.directory;
   config.vendor_css = prefixed(cp.vendor_prefix, config.vendor.css);
   config.vendor_js = prefixed(cp.vendor_prefix, config.vendor.js);
   config.min_css = prefixed(cp.vendor_src, assetMin('css', config.vendor.css));
   config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
-  config.python_cgi = path.join(cp.server_src, config.files.python_main)
 
-  config.browser = 'chrome';
-  if (process.env['TRAVIS']) {
-    config.browser =  'firefox';
-  }
+  if (process.env.VIRTUAL_ENV)
+    cp.python_env = process.env.VIRTUAL_ENV;
 
-  if (process.env['VIRTUAL_ENV'])
-    cp.python = process.env['VIRTUAL_ENV'];
-  config.python_exe = path.join(cp.python, 'bin', 'python')
+  config.python_cgi = path.join(cp.python_env, 'bin', 'carenet-cgi');
 
-  function tmpdir() {
+  config.test_browser = 'chrome';
+  if (process.env.TRAVIS)
+    config.test_browser = 'firefox';
+
+  function buildDir() {
     var args = Array.prototype.slice.call(arguments);
-    args.unshift(config.paths.tmp);
+    args.unshift(config.paths.build);
     return path.join.apply(null, args);
   }
 
   config.out = {
-    dist: tmpdir('dist'),
-    assets: tmpdir('dist', 'assets'),
-    css: tmpdir('dist', 'assets', 'css'),
-    misc: tmpdir('dist', 'assets', 'misc'),
-    test: tmpdir('test'),
-    devel: tmpdir('devel')
+    dist: buildDir('dist'),
+    assets: buildDir('dist', 'assets'),
+    css: buildDir('dist', 'assets', 'css'),
+    misc: buildDir('dist', 'assets', 'misc'),
+    test: buildDir('test'),
+    devel: buildDir('devel')
   };
 
   config.setHash = function setHash(hex) {
     var assetHash = 'assets-' + hex;
     config.assetHash = assetHash;
-    config.out.hash = tmpdir('dist', assetHash);
+    config.out.hash = buildDir('dist', assetHash);
   }
+
   return config;
 }
 
 
 function runGit(cmd) {
   var q = Q.defer();
-  require('child_process').exec('git ' + cmd, done);
+  childProc.exec('git ' + cmd, done);
   return q.promise;
-
   function done(err, stdout, stderr){
     if (err)
       q.reject(err, stdout, stderr);
@@ -161,10 +185,7 @@ function runClientTests() {
   var q = Q.defer();
   startKarma(args, function(e) {
     passfail(!e);
-    if (e)
-      q.reject(e)
-    else
-      q.resolve();
+    q.resolve();
   });
   return q.promise;
 }
@@ -186,25 +207,38 @@ function startKarma(args, done) {
 
 function runApiTests() {
 
-  var exec = require('child_process').exec
-    , color = util.colors.supportsColor
-    , pytest = config.paths.python + '/bin/py.test'
+  var color = util.colors.supportsColor
+    , cmd = [config.paths.python_env + '/bin/py.test']
     , tests = config.server_test
-    , cmd = [pytest, color ? ' --color=yes ' : '',
-             tests.join(' ')]
+    , opts = {stdio:'inherit'}
     , q = Q.defer();
 
-  exec(cmd.join(' '), done);
+  if (color)
+    cmd.push(' --color=yes');
+
+  cmd.push(tests.join(' '));
+
+  childProc.spawn('sh', ['-c', cmd.join(' ')], opts)
+    .on('error', done)
+    .on('exit', done);
+  
   return q.promise;
 
-  function done(e, stdo, stde) {
-    if (stdo)
-      log('\n' + stdo);
+  function done(e) {
     passfail(!e);
+    notify({failed: !!e, msg: 'API: ' + (e ? 'FAILED' : 'PASS')});
     if (e)
-      q.reject({stack: stde ? 'stderr:\n' + stde : ''});
+      // q.reject({stack: stde ? 'stderr:\n' + stde : ''});
+      q.reject(e===1 && 'Failed' || e);
     else
       q.resolve();
+  }
+  function notify(result) {
+    var util = require('util'),
+        icon = (result.failed || result.error) ? 'important' : 'dialog-ok',
+        code = result.failed ? 'FAIL' : 'PASS',
+        cmd = util.format('notify-send -t 1000 -i %s "%s"', icon, result.msg);
+    childProc.exec(cmd, function () {});
   }
 }
 
@@ -221,53 +255,59 @@ function watchApiTests() {
   }
 }
 
-function initJsTest() {
-  return makeDevelInitJs(config.out.test);
+function initJsUiTest() {
+  return makeInitJsDevel(config.out.test);
 }
 
 function initJsDevel() {
-  return makeDevelInitJs(config.out.devel);
+  return makeInitJsDevel(config.out.devel);
 }
 
-function gitBranch(done) {
-  return gitVar('rev-parse --abbrev-ref HEAD', 'gitBranch');
+function gitBranch() {
+  var cmd = 'rev-parse --abbrev-ref HEAD';
+  return runGit(cmd).then(function (out) {
+    config.gitBranch = out.trim();
+  });
 }
 
 function gitRevision() {
-  return gitVar('describe --tags', 'gitRevision')
+  var cmd = 'describe --tags';
+  return runGit(cmd).then(function (out) {
+    config.gitRevision = out.trim();
+  });
 }
 
-function gitClean() {
+function gitIsClean() {
   return runGit('diff --no-ext-diff --quiet --exit-code')
           .then(clean, dirty);
   function clean() {
-    config.gitClean = true;
+    config.gitIsClean = true;
   }
   function dirty() {
-    config.gitClean = false;
+    config.gitIsClean = false;
   }
 }
 
-function gitId() {
-  var suffix = config.gitClean ? '' : '+';
-  config.gitId = (config.gitBranch
+function versionTag(done) {
+  config.versionTag = process.env.CARENET_BUILD_VERSION || 'UNDEFINED!';
+  done();
+}
+
+function gitIdBroken(done) {
+  var suffix = config.gitIsClean ? '' : '+';
+  config.versionTag = (config.gitBranch
                     + '-' + config.gitRevision
                     + suffix);
+  done();
 }
 
-function gitVar(cmd, name) {
-  return runGit(cmd).then(ok);
-  function ok (out) {
-    config[name] = out.trim();
-  }
-}
-
-function makeDevelInitJs(out) {
-  var merge = require('merge-stream');
+function makeInitJsDevel(out) {
   var data = {
         devel: true
       , channel: 'devel'
-      , version: config.gitId
+      , deps: ['ngRoute']
+      , api: config.paths.api_cgi
+      , version: config.versionTag
       , js: config.vendor_js
       , css: config.vendor_css
       };
@@ -276,9 +316,9 @@ function makeDevelInitJs(out) {
                .pipe(push(data.js)),
 
       css = gulp.src(config.client_css, {read:false})
-               .pipe(push(data.css));
+                .pipe(push(data.css));
 
-  return merge(js, css).pipe(end())
+  return mergeStream(js, css).pipe(end())
             .pipe(gulp.dest(out));
 
   function push(l) {
@@ -300,12 +340,33 @@ function makeDevelInitJs(out) {
   }
 }
 
+function stringSrc(filename, string) {
+  var src = require('stream').Readable({objectMode: true})
+  src._read = function () {
+    this.push(new util.File({
+      cwd: '',
+      base: '',
+      path: filename,
+      contents: new Buffer(string)
+    }))
+    this.push(null)
+  }
+  return src
+}
+
+function distOnline() {
+  stringSrc('online.txt', 'ONLINE')
+      .pipe(gulp.dest(config.out.dist));
+}
+
 function distManifest() {
   if (!config.assetHash)
     throw new Error('missing asset hash');
-  var manifest = [];
 
-  return gulp.src(path.join(config.out.hash, '**'), {read:false})
+  var manifest = [],
+      allAssets = path.join(config.out.assets, '**');
+
+  return gulp.src(allAssets, {read:false})
              .pipe(through.obj(In))
              .pipe(through.obj(null, null, Out))
              .pipe(gulp.dest(config.out.dist));
@@ -318,30 +379,40 @@ function distManifest() {
   function Out(cb) {
     var manifestData = (
       'CACHE MANIFEST\n#'
-      + config.gitId + Math.random()
+      + config.versionTag + Math.random()
       + '\n'
       + manifest.join('\n')
+      + '\nFALLBACK:'
+      + '\n/online.txt ' + config.assetHash + '/misc/cached.txt'
       + '\nNETWORK:\n*\n'
     );
     var out = new util.File({
       path: config.files.cache_manifest,
       contents: new Buffer(manifestData)
     });
+    config.assetCount = manifest.length;
     this.push(out);
     cb();
   }
 }
 
-function initJsDist(hash, channel, version) {
+function initJsDist(channel, api) {
   var js = [config.files.vendorjs, config.files.appjs]
     , css = [config.files.vendorcss, config.files.appcss]
+    , hash = config.assetHash
+    , api_path = config.paths['api_' + api]
     , data = {
         devel: false
       , channel: channel
-      , version: version
+      , api: api_path
+      , version: config.versionTag
+      , deps: ['ngRoute', 'templates']
       , js: prefixed(hash, js)
       , css: prefixed(hash + '/css', css)
+      , assetCount: config.assetCount
       };
+  if (!api_path)
+    throw new Error('Incorrect api path: ' + api);
   return initJs(data);
 }
 
@@ -349,39 +420,32 @@ function initJs(data) {
   return '\nINIT(' + JSON.stringify(data) + ');\n';
 }
 
-function distHtml() {
+function generateIndexHtml(channel, api) {
   if (!config.assetHash)
     throw new Error('missing asset hash');
-  if (!config.gitId)
-    throw new Error('missing git ID');
-  var channel = (config.gitBranch == 'release'
-                    ? 'live'
-                    : 'staging'),
-      initjs = ' src=init.js>',
-      initjsReplace = '>' + initJsDist(config.assetHash,
-                                       channel,
-                                       config.gitId),
+  var initjs = ' src=init.js>',
+      initjsReplace = '>' + initJsDist(channel, api),
       iconpath = 'misc/power',
       iconpathReplace = config.assetHash + '/misc/power',
       html = '<html ',
       htmlReplace = '<html manifest=' + config.files.cache_manifest + ' ';
   return gulp.src(config.client_html)
-    .pipe(replace(initjs, initjsReplace))
-    .pipe(replace(iconpath, iconpathReplace))
-    .pipe(replace(html, htmlReplace))
-    .pipe(gulp.dest(config.out.dist));
+             .pipe(replace(initjs, initjsReplace))
+             .pipe(replace(iconpath, iconpathReplace))
+             .pipe(replace(html, htmlReplace))
+             .pipe(gulp.dest(config.out.dist));
 }
 
 function distAppCss() {
   return gulp.src(config.client_css)
-             .pipe(require('gulp-concat')(config.files.appcss))
+             .pipe(concat(config.files.appcss))
+             .pipe(minify())
              .pipe(gulp.dest(config.out.css));
 }
 
 function distAppJs() {
-  var merge = require('merge-stream');
   var templates = ngTemplateStream();
-  return merge(gulp.src(config.client_js), templates)
+  return mergeStream(gulp.src(config.client_js), templates)
           .pipe(ngAnnotate())
           .pipe(concat(config.files.appjs))
           .pipe(uglify())
@@ -394,7 +458,7 @@ function ngTemplateStream() {
     standalone: true
   };
   return gulp.src(config.client_templates)
-              .pipe(templateCache(args))
+             .pipe(templateCache(args))
 }
 
 function distAppMisc() {
@@ -404,20 +468,19 @@ function distAppMisc() {
 
 function distVendorCss() {
   return gulp.src(config.min_css)
-              .pipe(concat(config.files.vendorcss))
-              .pipe(gulp.dest(config.out.css));
+             .pipe(concat(config.files.vendorcss))
+             .pipe(gulp.dest(config.out.css));
 }
 
 function distVendorJs() {
   return gulp.src(config.min_js)
-              .pipe(concat(config.files.vendorjs))
-              .pipe(gulp.dest(config.out.assets));
+             .pipe(concat(config.files.vendorjs))
+             .pipe(gulp.dest(config.out.assets));
 }
 
 function distVendorMisc() {
 
-  var merge = require('merge-stream'),
-      dest = config.out.assets,
+  var dest = config.out.assets,
       stream = null;
 
   Object.keys(config.vendor.other || {}).forEach(each);
@@ -446,7 +509,7 @@ function relativePath(base) {
   });
 }
 
-function distHash() {
+function assetHash() {
   var crypto = require('crypto'),
       fs = require('fs'),
       hash = crypto.createHash('sha1');
@@ -459,26 +522,30 @@ function distHash() {
   }
   function Out(cb) {
     config.setHash(hash.digest('hex').substring(0,10));
-    fs.rename(config.out.assets, config.out.hash, cb);
+    fs.symlink('assets', config.out.hash, cb);
   }
 }
 
 function serveDevel() {
-  return runServer(develServer(config.out.devel, true),
+  var api_token = 'devel';
+  return runServer(develServer(api_token, config.out.devel, true),
                    config.ports.browse);
 }
 
-function serveTest() {
-  return runServer(develServer(config.out.test),
+function serveUiTest() {
+  var api_token = 'devel-uitest';
+  return runServer(develServer(api_token, config.out.test),
                    config.ports.test);
 }
 
 function serveDist() {
-  return runServer(distServer(), config.ports.browse);
+  var api_token = 'dist-local';
+  return runServer(distServer(api_token), config.ports.browse);
 }
 
 function serveSpec() {
-  return runServer(distServer(), config.ports.test);
+  var api_token = 'spec-local';
+  return runServer(distServer(api_token), config.ports.test);
 }
 
 function closeServer() {
@@ -503,15 +570,71 @@ function runServer(server, port) {
   return q.promise;
 }
 
-function distServer() {
+function distServer(api_token) {
   var serveStatic = require('serve-static')
-  return getServer()
+  return getServer(api_token)
+          // .use('/manifest.appcache', fakeManifest(2))
+          // .use('/' + config.assetHash + '/misc/cached.txt', simulateDownloadError)
           .use(serveStatic(config.out.dist));
 }
 
-function develServer(dir, reload) {
+var toggle = false;
+function simulateDownloadError(rq, rsp, next) {
+  if (toggle) {
+    toggle = false;
+    next();
+  }
+  else {
+    toggle = true;
+    rsp.simpleBody(404, '404');
+  }
+}
+
+function fakeManifest(count) {
+  return request;
+
+  function token() {
+    if (count>0)
+      count--;
+    return count;
+    // return Date.now();
+  }
+
+  function request(rq, rs) {
+    var manifest = [
+      'app.js',
+      'vendor.js',
+      'css/app.css',
+      'css/vendor.css',
+      'fonts/glyphicons-halflings-regular.eot',
+      'fonts/glyphicons-halflings-regular.ttf',
+      'fonts/glyphicons-halflings-regular.woff',
+      'fonts/glyphicons-halflings-regular.woff2',
+      'misc/power.ico',
+      'misc/power120.png',
+      'misc/power152.png',
+      'misc/power57.png',
+      'misc/power76.png',
+    ].map(function (x) {
+      return config.assetHash + '/' + x;
+    }).join('\n') + '\n';
+
+    // console.log(rq.headers);
+    var version = '### ' + token() + ' ###\n';
+    rs.setHeader('Content-Type', 'text/cache-manifest');
+    // rs.setHeader('Cache-Control', 'public, max-age=0');
+    rs.setHeader('Cache-Control', 'private, no-cache, max-age=0');
+    // rs.setHeader('Expires', 'Thu, 10 Sep 2015 00:00:00 GMT');
+    rs.setHeader('Expires', '0');
+    // rs.setHeader('Last-Modified', 'Sat, 10 Oct 2015 09:21:45 GMT');
+    rs.end('CACHE MANIFEST\n' + version + manifest + 'NETWORK:\n*\n');
+    // setTimeout(next, 2000);
+  }
+}
+
+function develServer(api_token, dir, reload) {
   var serveStatic = require('serve-static')
-  return getServer(reload)
+  return getServer(api_token, reload)
           .use(config.paths.vendor_prefix,
               serveStatic(config.paths.vendor_src))
           .use(serveStatic(dir))
@@ -519,34 +642,41 @@ function develServer(dir, reload) {
           .use(serveStatic(config.paths.client_src));
 }
 
-function getServer(reload) {
+function getServer(api_token, reload) {
   var connect = require('connect')
     , morgan = require('morgan')
     , cgi = require('cgi')
     , livereload = require('connect-livereload')
-    , api_cgi = cgi(config.python_exe, {
-        args: [config.python_cgi],
-        stderr: process.stderr
+    , api_cgi = cgi(config.python_cgi, {
+        stderr: process.stderr,
+        env: {'CARENET_ENV': api_token}
       })
     ;
   var s = connect()
             .use(morgan('dev'))
-            .use(config.paths.api_prefix, api_cgi);
+            .use('/' + config.paths.api_cgi, api_cgi);
   if (reload)
     s.use(livereload({port: config.ports.livereload}));
   return s;
 }
 
 function runUiTests() {
-  return runProtractor(config.ui_test);
+  return runProtractor(config.ui_test, config.ports.test);
 }
 
 function runSpecTests() {
-  return runProtractor(config.spec_test);
+  return runProtractor(config.spec_test, config.ports.test);
+}
+
+function runSpecTestsVagrant() {
+  return runProtractor(config.spec_test, config.ports.vagrant, '/livesim');
 }
 
 function openBrowser() {
-  require('opn')('http://localhost:' + config.ports.browse + '/');
+  // var path = 'form/login';
+  // var path = 'view/main';
+  var path = '';
+  require('opn')('http://localhost:' + config.ports.browse + '/#/' + path);
 }
 
 function logChange(event) {
@@ -564,7 +694,6 @@ function logChange(event) {
 
 function watchReload() {
   var tinylr = require('tiny-lr')
-    , server = tinylr()
     , watches = [
         config.client_js,
         config.client_css,
@@ -574,7 +703,7 @@ function watchReload() {
       ];
 
   watch(watches, onChange);
-  server.listen(config.ports.livereload, function(err) {
+  tinylr().listen(config.ports.livereload, function(err) {
     if (err)
       log(err);
     else
@@ -589,6 +718,7 @@ function watchReload() {
       case 'deleted':
         if (assetsRegexp.test(event.path)) {
           initJsDevel();
+          // triggers change
           return;
         }
     }
@@ -611,7 +741,7 @@ function cleanDist(done) {
   return del(config.out.dist);
 }
 
-function cleanTest(done) {
+function cleanUiTest(done) {
   return del(config.out.test);
 }
 
@@ -619,14 +749,17 @@ function cleanDevel(done) {
   return del(config.out.devel);
 }
 
-function runProtractor(tests) {
-  var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
-  var args = ['--baseUrl',
-              'http://localhost:' + config.ports.test,
+function runProtractor(tests, port, prefix) {
+  // var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
+  var url = 'http://localhost:' + port + (prefix || '/');
+
+  console.log(url);
+
+  var args = ['--baseUrl', url,
               '--directConnect', 'true',
               // '--browser.ignoreSynchronization', 'true',
-              // '--framework', 'jasmine2',
-              '--browser', config.browser,
+              '--framework', 'jasmine2',
+              '--browser', config.test_browser,
               '--specs', tests.join(',')],
       q = Q.defer(),
       error = null;
@@ -654,19 +787,19 @@ function runProtractor(tests) {
   return q.promise;
 }
 
-function updateWebdriver() {
-  var args = ['update', '--standalone'];
-  return _runProtractorBinary('webdriver-manager', args);
+function updateWebdriver(done) {
+  var bin = _protractorBinary('webdriver-manager');
+  var args = ['update',  '--standalone', '--chrome'];
+  return runCommand(bin, args);
 }
 
 function _runProtractorBinary(name, args) {
-  var spawn = require('child_process').spawn;
   var bin = _protractorBinary(name);
   var opts = {
     stdio: 'inherit',
     env: process.env
   };
-  return spawn(bin, args, opts)
+  return childProc.spawn(bin, args, opts)
 }
 
 function _protractorBinary(name) {
@@ -676,6 +809,21 @@ function _protractorBinary(name) {
     throw new Error('No protractor installation found'); 
   return path.resolve(path.join(path.dirname(prodir), '..', 'bin',
                                 name + winExt));
+}
+
+function runCommand(bin, args) {
+  var q = Q.defer();
+  childProc.spawn(bin, args, {stdio:'inherit'})
+    .on('error', function (e) {
+      q.reject(e);
+    })
+    .on('exit', function (code) {
+      if (code === 0)
+        q.resolve();
+      else
+        q.reject(code)
+    });
+  return q.promise;
 }
 
 function assetMin(ext, l) {
@@ -707,47 +855,5 @@ function readFile(fn) {
 
 function loadJson(fn) {
   return JSON.parse(readFile(fn));
-}
-
-function getBowerFiles() {
-  var getBower = require('main-bower-files')
-    , vendor_src = config.paths.vendor_src
-    , prefix = path.join(process.cwd(), vendor_src)
-    , jsExt = /\.js$/i
-    , cssExt = /\.css$/i
-    , js = []
-    , css = []
-    , other = []
-    , bowerFiles
-    , bowerOpts
-    , f
-    ;
-
-  bowerOpts = {
-    checkExistence: true
-  }
-
-  bowerFiles = getBower(bowerOpts).map(stripPrefix)
-  return bowerFiles;
-
-  while (bowerFiles.length) {
-    f = bowerFiles.shift();
-    if (jsExt.test(f))
-      js.push(f)
-    else if (cssExt.test(f))
-      css.push(f)
-    else
-      other.push(f)
-  }
-
-  return {
-      js: js,
-      css: css,
-      other: other
-  };
-
-  function stripPrefix(s) {
-    return s.replace(prefix+'/', '');
-  }
 }
 

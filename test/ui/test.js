@@ -1,4 +1,9 @@
 
+/***********************/
+throw new Error('UNUSED');
+/***********************/
+
+
 function view(path) {
   return browser.get('/#/view/' + path);
 }

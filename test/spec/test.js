@@ -1,15 +1,17 @@
 
 function view(path) {
-  return browser.get('/#/view/' + path);
+  return browser.get('#/view/' + path);
 }
 
-function url() {
-  return browser.getLocationAbsUrl();
+function expectUrl(x) {
+  var url = browser.getLocationAbsUrl();
+  expect(url).toEqual(x);
 }
 
 function getLog(f) {
-    return browser.manage().logs().get('browser')
+  return browser.manage().logs().get('browser')
 }
+
 
 afterEach(function () {
   getLog().then(function (log) {
@@ -20,33 +22,59 @@ afterEach(function () {
   });
 });
 
-describe('New session', function() {
-  it('shows login', function() {
-    view('main');
-    expect(url()).toBe('/form/login');
-    // expect(element(by.binding('root.connectionStatus')).getText()).toBe('ONLINE');
+
+describe('Login', function() {
+  it('shows form', function() {
+    browser.get('#/form/login')
+    expectUrl('/form/login');
+    expect(element(by.tagName('button')).getText())
+      .toEqual('Log in');
+    expect(element(by.tagName('h4')).getText())
+      .toEqual('carenet-ng login');
   });
 
-  it('accepts login', function() {
+  /*/
+  xit('requires login', function() {
     view('main');
-    expect(url()).toBe('/form/login');
+    expectUrl('/form/login');
+  });
+  /*/
+
+  it('rejects invalid credentials', function() {
+    browser.get('#/form/login')
+    element(by.model('self.form_data.username')).sendKeys('invalid');
+    element(by.model('self.form_data.password')).sendKeys('invalid');
+    element(by.tagName('form')).submit();
+    expectUrl('/form/login');
+    expect(element(by.exactBinding('self.form_message')).getText())
+      .toContain('failed');
+  });
+
+  it('accepts valid credentials', function() {
+    browser.get('#/form/login')
     element(by.model('self.form_data.username')).sendKeys('test');
     element(by.model('self.form_data.password')).sendKeys('test');
     element(by.tagName('form')).submit();
-    expect(url()).toBe('/view/main');
+    expectUrl('/view/main');
+    expect(element(by.tagName('h1')).getText())
+      .toContain('Hello');
   });
 
-  it('maintains the session', function () {
+  /*/
+  xit('maintains the session', function () {
     view('main');
-    expect(url()).toBe('/view/main');
+    expectUrl('/view/main');
   });
+  /*/
 
+  /*/
   it('can log out', function () {
     view('main');
     element(by.id('logout-link')).click();
     // browser.switchTo().alert().accept();
-    expect(url()).toBe('/form/login');
+    expectUrl('/form/login');
   });
+  /*/
 });
 
 

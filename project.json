@@ -1,25 +1,25 @@
 {
   "ports": {
-    "karma":        8066,
-    "test":         8077,
     "browse":       8088,
-    "livereload": 35729
+    "karma":        8087,
+    "test":         8086,
+    "vagrant":      8085,
+    "livereload":  35729
   },
 
   "paths": {
-    "client_src":   "src/client",
-    "server_src":   "src/server",
+    "client_src":     "src/client",
+    "server_src":     "src/server",
     "client_assets":  "static",
-    "client_test":  "test/client",
-    "server_test":  "test/server",
-    "ui_test":      "test/ui",
-    "spec_test":    "test/spec",
-    "vendor_src":   ".cache/bower_components",
+    "client_test":    "test/client",
+    "server_test":    "test/server",
+    "ui_test":        "test/ui",
+    "spec_test":      "test/spec",
+    "python_env":     ".cache/python",
+    "build":          ".cache/build",
 
-    "tmp":    ".run/carenet-gulp-tmp",
-    "python": ".cache/python",
-
-    "api_prefix":     "/api",
+    "api_cgi":        "api.cgi",
+    "api_daemon":     "/carenet-api",
     "vendor_prefix":  "/vendor"
   },
 
@@ -28,10 +28,11 @@
     "bower_json":     "bower.json",
     "karma_conf":     "karma.conf.js",
     "protractor_conf":"protractor.conf.js",
-    "python_main":    "main.py",
     "favicon":        "favicon.ico",
     "cache_manifest": "manifest.appcache",
     "initjs":         "init.js",
+    "distjs":         "dist.js",
+    "distcss":        "dist.css",
     "appjs":          "app.js",
     "appcss":         "app.css",
     "vendorjs":       "vendor.js",

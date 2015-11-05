@@ -1,73 +1,145 @@
 
 'use strict';
 
-var $;
+var _;
+
+window.CONFIG = {
+  devel: true,
+  channel: 'testing',
+  api: 'api',
+  deps: ['ngRoute']
+}
 
 beforeEach(Init);
 
 function Init() {
   module(window.CONFIG.app);
-  $ = {};
+  _ = {};
 }
 
 function Inject() {
 
   var names = Array.prototype.slice.call(arguments);
-  return init;
-
-  function init() {
-    inject(names.concat([receiveDeps]));
-  }
+  return inject(names.concat([receiveDeps]));
 
   function receiveDeps() {
     for (var i=0; i<names.length; ++i)
-      $[names[i]] = arguments[i];
+      _[names[i]] = arguments[i];
   }
 }
 
-describe('Sanity', function () {
-  it('should have angular', function () {
+
+describe('Test sanity', function () {
+
+  beforeEach(Inject('$q'));
+
+  it('has angular', function () {
     expect(angular).toBeDefined();
-    expect($.App).not.toBeDefined();
+    expect(_.$q).toBeDefined();
   });
-});
 
-describe('Basics', function () {
-
-  beforeEach(Inject('App', '$controller', '$routeParams', '$interval'));
-
-  function viewCtrl(name) {
-    $.$routeParams.name = name;
-    return $.$controller('ViewCtrl');
-  }
-
-  describe('App', function () {
-    it('sends online event', function () {
-      var count = 0;
-      $.App.$on('online', function (e) {
-        count++;
-      });
-      expect(count).toBe(0);
-      $.$interval.flush(1000);
-      expect(count).toBe(1);
-    });
-
-    it('should say hello', function () {
-      var ctrl = viewCtrl('main');
-      expect(ctrl.message).toBe('Hello');
-    });
-
+  it('injects deps', function () {
+    Inject('$log');
+    expect(_.$log).toBeDefined();
+    expect(_.$q).toBeDefined();
   });
-});
-
-describe('Other', function () {
-
-  beforeEach(Inject('App'));
 
   it('should not leak dependencies', function () {
-    expect(angular).toBeDefined();
-    expect($.App).toBeDefined();
-    expect($.$interval).not.toBeDefined();
+    Inject('$http');
+    expect(_.$http).toBeDefined();
+    expect(_.$q).toBeDefined();
+    expect(_.$log).not.toBeDefined();
+  });
+});
+
+
+describe('RemoveOnLoadDirective', function () {
+
+  beforeEach(Inject('$compile', '$rootScope'));
+  
+  it('removes the element', function  () {
+    var scope = _.$rootScope.$new();
+    var el = _.$compile('<p><span remove-on-load> blah </span>')(scope);
+    scope.$digest();
+    expect(el.html()).toEqual('');
   });
 
 });
+
+
+describe('Routes', function () {
+
+  beforeEach(Inject('$location', '$route', '$rootScope', '$httpBackend'));
+  afterEach(function () {
+    _.$httpBackend.verifyNoOutstandingExpectation();
+    _.$httpBackend.verifyNoOutstandingRequest();
+  })
+
+  it('loads login view', function() {
+    _.$location.path('/form/login')
+    _.$httpBackend.expectGET('templates/login_form.html').respond(200);
+    _.$rootScope.$digest();
+    _.$httpBackend.flush();
+    expect(_.$route.current.controller).toBe('LoginCtrl')
+  });
+
+  it('loads main view', function() {
+    _.$location.path('/view/main')
+    _.$httpBackend.expectGET('templates/main.html').respond(200);
+    _.$rootScope.$digest();
+    _.$httpBackend.flush();
+    expect(_.$route.current.controller).toBe('ViewCtrl')
+  });
+});
+
+
+describe('LoginCtrl', function () {
+
+  beforeEach(Inject('$controller', '$httpBackend'))
+  afterEach(function () {
+    _.$httpBackend.verifyNoOutstandingExpectation();
+    _.$httpBackend.verifyNoOutstandingRequest();
+  })
+
+  it('calls API via http', function () {
+    var ctrl = _.$controller('LoginCtrl');
+    _.$httpBackend.expectPOST('api/login').respond(200);
+    ctrl.submit();
+    _.$httpBackend.flush();
+  });
+
+  it('handles auth failure', function () {
+    var ctrl = _.$controller('LoginCtrl');
+    var rsp = {result: false, message: 'Login failed'};
+    _.$httpBackend.expectPOST('api/login').respond(200, rsp);
+    ctrl.submit();
+    _.$httpBackend.flush();
+    expect(ctrl.logged_in).toBe(false);
+    expect(ctrl.form_message).toContain('Login failed');
+  });
+
+  it('handles auth success', function () {
+    var ctrl = _.$controller('LoginCtrl');
+    var rsp = {result: true};
+    _.$httpBackend.expectPOST('api/login').respond(200, rsp);
+    ctrl.submit();
+    _.$httpBackend.flush();
+    expect(ctrl.logged_in).toBe(true);
+    expect(ctrl.form_message).toEqual('');
+  });
+
+});
+
+
+describe('ViewCtrl', function () {
+
+  // beforeEach(Inject('App', '$controller', '$routeParams', '$interval'));
+  beforeEach(Inject('$controller'))
+
+  it('says hello', function () {
+    var ctrl = _.$controller('ViewCtrl');
+    expect(ctrl.message).toEqual('Hello');
+  });
+
+});
+
