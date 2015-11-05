@@ -6,6 +6,8 @@ env:
 
 before_install:
   - "sh -e /etc/init.d/xvfb start"
+  - nvm install 0.10
+  - npm install -g npm@3
 
 install: 
   - ./build.sh setup
