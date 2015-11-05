@@ -1,4 +1,7 @@
 
+[![build status](https://travis-ci.org/avdd/carenet-ng.svg?branch=master)](https://travis-ci.org/avdd/carenet-ng)
+
+
 # Getting started
 
 Run `./build.sh setup` which does, roughly, this:
