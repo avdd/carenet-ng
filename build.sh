@@ -49,7 +49,7 @@ _check_local() {
     echo Must be run from project root
     exit 231
   }
-  _check_external_deps || exit 230
+  # _check_external_deps || exit 230
 }
 
 _check_project_root() {
