@@ -1,6 +1,6 @@
-.cache
-.vagrant
-gulp
-misc
-node_modules
-*.egg-info
+/.cache
+/.vagrant
+/gulp
+/misc
+/node_modules
+/src/server/*.egg-info
