@@ -63,9 +63,22 @@ describe('RemoveOnLoadDirective', function () {
     scope.$digest();
     expect(el.html()).toEqual('');
   });
-
 });
 
+
+describe('AutofocusDirective', function () {
+
+  beforeEach(Inject('$timeout', '$compile', '$rootScope'));
+  
+  it('calls focus', function  () {
+    var scope = _.$rootScope.$new();
+    var el = _.$compile('<input autofocus>')(scope);
+    var focused = false
+    el[0].focus = function () { focused = true; }
+    _.$timeout.flush();
+    expect(focused).toBeTruthy();
+  });
+});
 
 describe('Routes', function () {
 
@@ -101,6 +114,19 @@ describe('LoginCtrl', function () {
     _.$httpBackend.verifyNoOutstandingRequest();
   })
 
+  it('is submittable only with form filled', function () {
+    var ctrl = _.$controller('LoginCtrl');
+    expect(ctrl.submittable).toBe(false);
+    ctrl.form_data.username = ''
+    ctrl.form_data.password = ''
+    ctrl.changed();
+    expect(ctrl.submittable).toBe(false);
+    ctrl.form_data.username = 'foo'
+    ctrl.form_data.password = 'foo'
+    ctrl.changed();
+    expect(ctrl.submittable).toBe(true);
+  });
+
   it('calls API via http', function () {
     var ctrl = _.$controller('LoginCtrl');
     _.$httpBackend.expectPOST('api/login').respond(200);
@@ -127,7 +153,6 @@ describe('LoginCtrl', function () {
     expect(ctrl.logged_in).toBe(true);
     expect(ctrl.form_message).toEqual('');
   });
-
 });
 
 
@@ -140,6 +165,5 @@ describe('ViewCtrl', function () {
     var ctrl = _.$controller('ViewCtrl');
     expect(ctrl.message).toEqual('Hello');
   });
-
 });
 

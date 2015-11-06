@@ -8,6 +8,7 @@ angular.module(window.CONFIG.app, window.CONFIG.deps)
   .controller('LoginCtrl', LoginCtrl)
   .controller('ViewCtrl', ViewCtrl)
   .directive('removeOnLoad', RemoveOnLoadDirective)
+  .directive('autofocus', AutofocusDirective)
   .config(appConfig)
   .run(appRun)
   ;
@@ -24,21 +25,18 @@ function appRun($rootScope, $http) {
 }
 
 function appConfig($routeProvider) {
-  var loginRoute = {
+
+  $routeProvider.when('/form/login', {
     templateUrl: 'templates/login_form.html',
     controller: 'LoginCtrl',
     controllerAs: 'self'
-  };
+  });
 
-  $routeProvider.when('/form/login', loginRoute);
-
-  var viewRoute = {
+  $routeProvider.when('/view/:name', {
     templateUrl: getViewTemplate,
     controller: 'ViewCtrl',
     controllerAs: 'self'
-  };
-
-  $routeProvider.when('/view/:name', viewRoute);
+  });
 
   function getViewTemplate(params) {
     return 'templates/' + params.name + '.html';
@@ -48,9 +46,17 @@ function appConfig($routeProvider) {
 
 function LoginCtrl($location, $http) {
   var self = this;
-  this.form_break = 'md';
+  this.form_break = 'sm';
   this.form_data = {}
+  this.submittable = false
   this.logged_in = false;
+  this.form_message = '';
+
+  this.changed = function changed() {
+    var f = self.form_data;
+    if (f.username && f.password)
+      self.submittable = true;
+  }
 
   this.submit = function Submit() {
     self.form_message = '';
@@ -81,6 +87,17 @@ function RemoveOnLoadDirective() {
       el.remove();
     }
   }
+}
+
+function AutofocusDirective($timeout) {
+  return {
+    restrict: 'A',
+    link: function ($scope, el) {
+      $timeout(function () {
+        el[0].focus();
+      });
+    }
+  };
 }
 
 
