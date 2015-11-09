@@ -25,6 +25,7 @@ var gulp = require('gulp')
 
 task('default', ['browse-devel']);
 task('dist', ['browse-dist']);
+task('spec', ['test-spec']);
 
 task('browse-devel', ['serve-devel'], browseDevel);
 task('browse-dist', ['serve-dist'], browseDist);
@@ -752,8 +753,6 @@ function cleanDevel(done) {
 function runProtractor(tests, port, prefix) {
   // var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
   var url = 'http://localhost:' + port + (prefix || '/');
-
-  console.log(url);
 
   var args = ['--baseUrl', url,
               '--directConnect', 'true',
