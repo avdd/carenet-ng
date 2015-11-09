@@ -8,12 +8,12 @@ from . import api
 def login(cx):
     u = cx.arg.get('username')
     p = cx.arg.get('password')
-    result = u == 'test' and p == 'test'
-    msg = None
-    if not result:
-        msg = 'Login failed'
-    return {'result': result,
-            'message': msg}
+    # FIXME: config!
+    result = u == 'mister' and p == 'bungle'
+    if result:
+        return {'result': result}
+    else:
+        return {'error': {'message': 'Login failed'}}
     #return {'login': u'ok ♫'}
 
 

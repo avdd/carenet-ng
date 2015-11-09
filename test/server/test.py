@@ -36,13 +36,13 @@ def client():
 def test_login_rejects_invalid():
     rv = client().send('login', dict(username='',
                                      password=''))
-    assert 'result' in rv.json
+    assert 'error' in rv.json
     assert rv.json and not rv.json.get('result')
 
 
 def test_login_rejects_valid():
-    rv = client().send('login', dict(username='test',
-                                     password='test'))
+    rv = client().send('login', dict(username='mister',
+                                     password='bungle'))
     assert 'result' in rv.json
     assert rv.json and rv.json.get('result')
 

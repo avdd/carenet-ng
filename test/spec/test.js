@@ -1,11 +1,16 @@
 
-function view(path) {
-  return browser.get('#/view/' + path);
+function get(path) {
+  return browser.get('#/' + path);
 }
 
 function expectUrl(x) {
   var url = browser.getLocationAbsUrl();
-  expect(url).toEqual(x);
+  expect(url).toEqual('/' + x);
+}
+
+function expectUrlNot(x) {
+  var url = browser.getLocationAbsUrl();
+  expect(url).not.toEqual('/' + x);
 }
 
 function getLog(f) {
@@ -23,58 +28,55 @@ afterEach(function () {
 });
 
 
-describe('Login', function() {
-  it('shows form', function() {
-    browser.get('#/form/login')
-    expectUrl('/form/login');
+describe('clean session', function () {
+  it('redirects to login', function () {
+    get('view/main')
+    expectUrl('form/login');
+  });
+});
+
+describe('login', function () {
+  it('form appears', function () {
+    get('form/login')
+    expectUrl('form/login');
+    expect(element(by.model('self.form_data.username'))
+           .isPresent()).toBe(true);
+    expect(element(by.model('self.form_data.password'))
+           .isPresent()).toBe(true);
     expect(element(by.tagName('button')).getText())
       .toEqual('Log in');
-    expect(element(by.tagName('h4')).getText())
-      .toEqual('carenet-ng login');
   });
 
-  /*/
-  xit('requires login', function() {
-    view('main');
-    expectUrl('/form/login');
-  });
-  /*/
-
-  it('rejects invalid credentials', function() {
-    browser.get('#/form/login')
-    element(by.model('self.form_data.username')).sendKeys('invalid');
-    element(by.model('self.form_data.password')).sendKeys('invalid');
+  it('rejects invalid credentials', function () {
+    get('form/login')
+    var invalid = 'definitely-not-valid';
+    element(by.model('self.form_data.username')).sendKeys(invalid);
+    element(by.model('self.form_data.password')).sendKeys(invalid);
     element(by.tagName('form')).submit();
-    expectUrl('/form/login');
+    expectUrl('form/login');
     expect(element(by.exactBinding('self.form_message')).getText())
       .toContain('failed');
   });
 
-  it('accepts valid credentials', function() {
-    browser.get('#/form/login')
-    element(by.model('self.form_data.username')).sendKeys('test');
-    element(by.model('self.form_data.password')).sendKeys('test');
+  it('accepts valid credentials', function () {
+    get('view/main');
+    element(by.model('self.form_data.username')).sendKeys('mister');
+    element(by.model('self.form_data.password')).sendKeys('bungle');
     element(by.tagName('form')).submit();
-    expectUrl('/view/main');
+    expectUrl('view/main');
     expect(element(by.tagName('h1')).getText())
       .toContain('Hello');
   });
 
-  /*/
-  xit('maintains the session', function () {
-    view('main');
-    expectUrl('/view/main');
-  });
-  /*/
 
-  /*/
-  it('can log out', function () {
-    view('main');
-    element(by.id('logout-link')).click();
-    // browser.switchTo().alert().accept();
-    expectUrl('/form/login');
+
+//-----
+
+  xit('maintains the session', function () {
+    get('view/main');
+    expectUrl('view/main');
   });
-  /*/
+
 });
 
 
