@@ -7,6 +7,11 @@ from werkzeug.utils import cached_property
 from carenetng.app import app
 
 
+TEST_USER = {
+    'username': 'test-user',
+    'password': 'the-test-password'
+}
+
 class JsonResponse(Response):
     @cached_property
     def json(self):
@@ -20,6 +25,7 @@ class JsonResponse(Response):
 
 
 app.response_class = JsonResponse
+app.config['TEST_USER'] = TEST_USER
 
 
 def client():
@@ -34,15 +40,15 @@ def client():
 
 
 def test_login_rejects_invalid():
-    rv = client().send('login', dict(username='',
-                                     password=''))
+    rv = client().send('login', {})
     assert 'error' in rv.json
     assert rv.json and not rv.json.get('result')
 
 
 def test_login_rejects_valid():
-    rv = client().send('login', dict(username='mister',
-                                     password='bungle'))
+    u = {'username': TEST_USER['username'],
+         'password': TEST_USER['password']}
+    rv = client().send('login', u)
     assert 'result' in rv.json
     assert rv.json and rv.json.get('result')
 
