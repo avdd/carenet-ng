@@ -45,7 +45,7 @@
     "client_templates":
                     ["templates/*.html"],
     "client_test":  ["*.js"],
-    "server_py":    ["*.py"],
+    "server_py":    ["carenetng/*.py"],
     "server_test":  ["*.py"],
     "ui_test":      ["*.js"],
     "spec_test":    ["*.js"]
