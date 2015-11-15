@@ -5,14 +5,11 @@ shopt -s extglob
 SELF=$(readlink -f $0)
 SCRIPT=$(basename $SELF)
 
-PYREQ_DEVEL=pyreq-devel.txt
-PYREQ_SERVER=pyreq-server.txt
-PYREQ_AUTO=pyreq-auto.txt
+PYTHON_REQUIRES=python-requires.txt
 GULP_JS=node_modules/gulp/bin/gulp.js
 
 FLAK_GITHUB=https://github.com/avdd/flak/tarball
 CARENET_WHEEL=carenet_ng-0+rolling-py2-none-any.whl 
-PYTHON_LDAP_WHEEL=/python_ldap-2.3.13-cp27-none-linux_i686.whl
 
 DAEMON_PORT=8099
 DAEMON_WORKERS=2
@@ -91,29 +88,22 @@ _check_external_deps() {
 _init_local() {
   PUBLISH_HOST=
   PUBLISH_ROOT=$PWD/.cache/publish
-  PYREQ=$PYREQ_DEVEL
 }
 
 
 _init_remote() {
   PUBLISH_HOST=avdd@rev
   PUBLISH_ROOT=carenet-ng
-  PYREQ=$PYREQ_SERVER
 }
 
 
 _init_vagrant() {
   PUBLISH_HOST=default
   PUBLISH_ROOT=publish
-  PYREQ=$PYREQ_SERVER
   VAGRANT_SSH_CONFIG=.vagrant/ssh_config
   SSH_ARGS="-F $VAGRANT_SSH_CONFIG"
   export RSYNC_RSH="ssh $SSH_ARGS"
-  _vagrant up
-  _vagrant provision
-  _vagrant ssh-config > $VAGRANT_SSH_CONFIG
 }
-
 
 _init_target() {
   channel=${1:-}
@@ -188,6 +178,7 @@ _do_publish_vagrant() {
   _init_vagrant
   _init_build
   _build_all
+  _vagrant_up
   _rsync
   _install_remote
 }
@@ -246,6 +237,7 @@ _do_rsync_vagrant() {
   _check_local
   _init_vagrant
   _init_build
+  _vagrant_up
   _rsync
 }
 
@@ -269,6 +261,7 @@ _do_install_vagrant() {
   _init_target "$@"
   _init_vagrant
   _init_build
+  _vagrant_up
   _install_remote
 }
 
@@ -351,7 +344,7 @@ _do_setup() {
   echo 'building python deps'
   _build_wheel_deps
   pip=$PYTHON/bin/pip
-  $pip install --no-deps --no-index -f $WHEELHOUSE -r $PYREQ_DEVEL
+  $pip install --no-deps --no-index -f $WHEELHOUSE -r $PYTHON_REQUIRES
   (cd src/server && $pip install -e .)
   echo 'updating webdriver'
   npm run gulp update-webdriver
@@ -360,8 +353,14 @@ _do_setup() {
 
 _do_test_full() {
   ./gulp test
+  _do_test_vagrant
+}
+
+
+_do_test_vagrant() {
   git=$(git describe --long --first-parent --dirty)
-  _do_publish_vagrant livesim $(date +%y%m%d).0.$git
+  _do_publish_vagrant livesim $(date +%y%m%d).0.$git.$RANDOM
+  sleep 1
   ./gulp test-vagrant
 }
 
@@ -378,14 +377,15 @@ _do_check_deps() {
 
 _do_pydiff() {
   pip=.cache/python/bin/pip
-  pattern='^(carenet-ng|python-ldap)=='
-  pyreq=pyreq-auto.txt
-  diff -u $pyreq <( $pip freeze |egrep -v "$pattern" )
+  pattern='^(carenet-ng)=='
+  diff -u $PYTHON_REQUIRES <( $pip freeze |egrep -v "$pattern" )
   return 0
   # or:
-  diff -u $pyreq <( $pip freeze |egrep -v "$pattern" ) | patch $pyreq
+  diff -u $PYTHON_REQUIRES \
+          <( $pip freeze |egrep -v "$pattern" ) \
+        | patch $PYTHON_REQUIRES
   # or
-  $pip freeze | egrep -v "$pattern" > $pyreq
+  $pip freeze | egrep -v "$pattern" > $PYTHON_REQUIRES
 }
 
 
@@ -416,7 +416,7 @@ __do__update_npm_dep__wip__() {
 }
 
 
-_do_provision_vagrant() {
+_do_provision_vagrant_root() {
   a2enmod expires
   a2enmod proxy_http
   ln -sfnv /vagrant/apache-vagrant.conf \
@@ -424,6 +424,15 @@ _do_provision_vagrant() {
   /etc/init.d/apache2 force-reload
 }
 
+_do_provision_vagrant_user() {
+  mkdir -p ~/publish
+  psql -l >/dev/null || {
+    sudo -u postgres createuser -s vagrant
+  }
+  dropdb crowdtest || true
+  createdb crowdtest
+  psql -Xaq1 -v ON_ERROR_STOP=1 -d crowdtest -f /vagrant/crowd-test.sql 
+}
 
 _build_all() {
   _build_static
@@ -452,14 +461,13 @@ _build_this_wheel() {
 
 
 _build_wheel_deps() {
-  flak_version=$(grep ^Flak== $PYREQ_AUTO | cut -c7-)
+  flak_version=$(grep ^Flak== $PYTHON_REQUIRES | cut -c7-)
   mkdir -p $WHEELHOUSE
   if ! $PIP_WHEEL --no-index --no-deps "Flak==$flak_version"
   then
     $PIP_WHEEL --no-index --no-deps $FLAK_GITHUB/$flak_version
   fi
-  #$PIP_WHEEL --no-index -r $PYREQ_DEVEL
-  $PIP_WHEEL --no-deps -r $PYREQ_DEVEL
+  $PIP_WHEEL --no-deps -r $PYTHON_REQUIRES
 }
 
 
@@ -469,11 +477,6 @@ _check_wheel_deps() {
   for wheel64 in $WHEELHOUSE/*_64.whl
   do
     wheel32=${wheel64/x86_64/i686} 
-    case "$wheel64" in
-      *python_ldap*)
-        wheel32=$WHEELHOUSE/$PYTHON_LDAP_WHEEL
-        ;;
-    esac
     test -f "$wheel32" || {
       echo "Missing wheel: $wheel32"
       ((missing++))
@@ -484,12 +487,11 @@ _check_wheel_deps() {
 
 
 _build_wheels_vagrant() {
-  _vagrant up
-  _vagrant provision
+  _vagrant_up
   _vagrant ssh -- \
     /opt/python27/bin/pip wheel --no-deps \
     -f /wheelhouse/ -w /wheelhouse/ \
-    -r /vagrant/$PYREQ_SERVER
+    -r /vagrant/$PYTHON_REQUIRES
 }
 
 
@@ -500,8 +502,7 @@ _rsync() {
   else
     rsync_dest=$PUBLISH_ROOT
   fi
-  rsync -rav $PYREQ $rsync_dest/pyreq-install.txt
-  rsync -rav $SELF $PYREQ_AUTO $rsync_dest
+  rsync -rav $SELF $PYTHON_REQUIRES $rsync_dest
   rsync -rav $WHEELHOUSE/ $rsync_dest/wheelhouse/
   rsync -rav --delete $BUILD/dist/ $rsync_dest/cached-static/
 }
@@ -514,6 +515,14 @@ _vagrant() {
   return $status
 }
 
+
+_vagrant_up() {
+  [[ "${VAGRANT_UP:-}" ]] && return 0
+  _vagrant up
+  _vagrant provision
+  _vagrant ssh-config > $VAGRANT_SSH_CONFIG
+  VAGRANT_UP=1
+}
 
 ### install-side
 
@@ -535,7 +544,7 @@ _install() {
   _install_instance
   _install_static
   _finish_$install
-  rm $PUBLISH_ROOT/pyreq-* $PUBLISH_ROOT/$SCRIPT
+  rm $PUBLISH_ROOT/$PYTHON_REQUIRES $PUBLISH_ROOT/$SCRIPT
 }
 
 
@@ -566,7 +575,7 @@ _install_instance() {
   virtualenv $PUBLISH_INST
   $PUBLISH_INST/bin/pip install --no-index \
       -f $PUBLISH_ROOT/wheelhouse \
-      -r $PUBLISH_ROOT/pyreq-install.txt \
+      -r $PUBLISH_ROOT/$PYTHON_REQUIRES \
       $PUBLISH_ROOT/wheelhouse/$CARENET_WHEEL
 }
 
@@ -619,6 +628,8 @@ _activate_release() {
     ln -sfnv $previous $PUBLISH_ROOT/$channel/previous
     rm -fv $previous/var
   fi
+
+  export CARENET_ENV=$channel
 
   echo starting ...
   $current/bin/gunicorn \

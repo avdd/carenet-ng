@@ -60,8 +60,8 @@ describe('login', function () {
 
   it('accepts valid credentials', function () {
     get('view/main');
-    element(by.model('self.form_data.username')).sendKeys('mister');
-    element(by.model('self.form_data.password')).sendKeys('bungle');
+    element(by.model('self.form_data.username')).sendKeys('devel-only');
+    element(by.model('self.form_data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
     expectUrl('view/main');
     expect(element(by.tagName('h1')).getText())

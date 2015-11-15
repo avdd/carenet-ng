@@ -1,54 +1,62 @@
-# -*- coding: utf8 -*-
 
-import json
 import pytest
-from flak.wrappers import Response
-from werkzeug.utils import cached_property
 from carenetng.app import app
 
+# from carenetng import crowd
 
-TEST_USER = {
-    'username': 'test-user',
-    'password': 'the-test-password'
+
+TEST_USERS = {
+    'test-user': 'test password',
+    'test-user-2': 'test password 2',
 }
 
-class JsonResponse(Response):
-    @cached_property
-    def json(self):
-        if 'json' not in self.mimetype:
-            raise AttributeError('Not a JSON response')
-        try:
-            from simplejson import loads
-        except ImportError:
-            from json import loads
-        return loads(self.data)
+
+@pytest.fixture(autouse=True)
+def test_setup():
+    app.authenticate = _authenticate
 
 
-app.response_class = JsonResponse
-app.config['TEST_USER'] = TEST_USER
-
-
-def client():
-    c = app.test_client()
-    def send(url, args):
-        return c.post(url,
-                      content_type='application/json',
-                      headers=[('accept', 'application/json')],
-                      data=json.dumps(args))
-    c.send = send
-    return c
+def _authenticate(cx, u, p):
+    pw = TEST_USERS.get(u)
+    return pw and pw == p or False
 
 
 def test_login_rejects_invalid():
-    rv = client().send('login', {})
+    rv = app.client().send('login', {})
+    assert rv.json
     assert 'error' in rv.json
-    assert rv.json and not rv.json.get('result')
+    assert 'result' not in rv.json
 
 
-def test_login_rejects_valid():
-    u = {'username': TEST_USER['username'],
-         'password': TEST_USER['password']}
-    rv = client().send('login', u)
+def test_login_rejects_invalid_user():
+    rv = app.client().send('login', {'username': 'nope'})
+    assert rv.json
+    assert 'error' in rv.json
+    assert 'result' not in rv.json
+
+
+def test_login_rejects_invalid_password():
+    args = {'username': 'test-user',
+            'password': 'wrong password'}
+    rv = app.client().send('login', args)
+    assert rv.json
+    assert 'error' in rv.json
+    assert 'result' not in rv.json
+
+
+def test_login_accepts_valid_user():
+    args = {'username': 'test-user',
+            'password': 'test password'}
+    rv = app.client().send('login', args)
     assert 'result' in rv.json
-    assert rv.json and rv.json.get('result')
+    assert rv.json['result']
+
+
+def test_login_accepts_second_valid_user():
+    args = {'username': 'test-user-2',
+            'password': 'test password 2'}
+    rv = app.client().send('login', args)
+    assert 'result' in rv.json
+    assert rv.json['result']
+
 

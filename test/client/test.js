@@ -170,17 +170,6 @@ describe('LoginCtrl', function () {
 });
 
 
-describe('ViewCtrl', function () {
-
-  beforeEach(Inject('$controller'))
-
-  it('says hello', function () {
-    var ctrl = _.$controller('ViewCtrl');
-    expect(ctrl.message).toEqual('Hello');
-  });
-});
-
-
 describe('App.authenticate', function () {
 
   beforeEach(Inject('CONFIG', 'App', '$httpBackend'));
@@ -209,6 +198,17 @@ describe('App.authenticate', function () {
     expect(_.App.getSession()).toBeFalsy();
   });
 
+});
+
+
+describe('ViewCtrl', function () {
+
+  beforeEach(Inject('$controller'))
+
+  it('says hello', function () {
+    var ctrl = _.$controller('ViewCtrl');
+    expect(ctrl.message).toEqual('Hello');
+  });
 });
 
 

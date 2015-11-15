@@ -1,2 +1,0 @@
-python-ldap==2.3.13
--r pyreq-auto.txt

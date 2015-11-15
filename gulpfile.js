@@ -209,7 +209,8 @@ function startKarma(args, done) {
 function runApiTests() {
 
   var color = util.colors.supportsColor
-    , cmd = [config.paths.python_env + '/bin/py.test']
+    , cmd = [config.paths.python_env + '/bin/py.test',
+             '--showlocals']
     , tests = config.server_test
     , opts = {stdio:'inherit'}
     , q = Q.defer();
