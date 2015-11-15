@@ -11,6 +11,8 @@ before_install:
 
 install: 
   - ./build.sh setup
+  - createdb crowdtest
+  - psql -d crowdtest -f crowd-test.sql
 
 script: 
   - ./gulp test
