@@ -66,8 +66,6 @@ def _dispatch(registry, rq):
         return _response_error(500, 'Internal server error')
 
 
-
-
 def _check_request(rq, spec):
     return True
 
