@@ -8,7 +8,6 @@ SCRIPT=$(basename $SELF)
 PYTHON_REQUIRES=python-requires.txt
 GULP_JS=node_modules/gulp/bin/gulp.js
 
-FLAK_GITHUB=https://github.com/avdd/flak/tarball
 CARENET_WHEEL=carenet_ng-0+rolling-py2-none-any.whl 
 
 DAEMON_PORT=8099
@@ -351,7 +350,11 @@ _do_setup_python() {
   _build_wheel_deps
   pip=$PYTHON/bin/pip
   $pip install --no-deps --no-index -f $WHEELHOUSE -r $PYTHON_REQUIRES
-  (cd src/server && $pip uninstall -y carenet-ng && $pip install -e .)
+  if $pip freeze | grep -q carenet-ng
+  then
+    $pip uninstall -y carenet-ng
+  fi
+  (cd src/server && $pip install -e .)
 }
 
 
@@ -465,12 +468,7 @@ _build_this_wheel() {
 
 
 _build_wheel_deps() {
-  flak_version=$(grep ^Flak== $PYTHON_REQUIRES | cut -c7-)
   mkdir -p $WHEELHOUSE
-  if ! $PIP_WHEEL --no-index --no-deps "Flak==$flak_version"
-  then
-    $PIP_WHEEL --no-index --no-deps $FLAK_GITHUB/$flak_version
-  fi
   $PIP_WHEEL --no-deps -r $PYTHON_REQUIRES
 }
 
