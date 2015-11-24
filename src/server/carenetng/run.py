@@ -3,7 +3,7 @@ from __future__ import absolute_import
 __metaclass__ = type
 
 import click
-from . import app
+from . import core
 from . import web
 
 import logging
@@ -14,18 +14,17 @@ DEFAULT_RUN_PORT = 8099
 
 
 def web_factory():
-    return app.context()
+    return core.context()
 
 def script_factory(info):
-    return app.context({})
+    return core.context({})
 
 class ScriptInfo:
     pass
 
 
-handler = web.handler(app.registry)
+handler = web.handler(core.registry)
 wsgi = web.wsgi_wrapper(handler, factory=web_factory)
-#cgi = web.cgi(wsgi)
 cli = click.Group() #script_factory)
 main = cli.main
 pass_info = click.make_pass_decorator(ScriptInfo, ensure=True)

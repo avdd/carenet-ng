@@ -5,7 +5,7 @@ __metaclass__ = type
 import logging
 log = logging.getLogger(__name__)
 
-from .app import api
+from .core import api
 
 
 @api(username=str, password=str)

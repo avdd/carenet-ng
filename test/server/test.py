@@ -3,14 +3,14 @@ __metaclass__ = type
 
 import pytest
 
-from carenetng import app
+from carenetng import core
 from carenetng import login
 # from carenetng import crowd
 
 
 @pytest.fixture()
 def cx():
-    cx = app.context()
+    cx = core.context()
     cx.authenticate = _authenticate
     return cx
 

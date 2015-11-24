@@ -4,7 +4,7 @@ __metaclass__ = type
 
 import pytest
 import simplejson as json
-from carenetng import app
+from carenetng import core
 from carenetng import web
 
 
@@ -37,7 +37,7 @@ def _make_wsgi():
         wsgi.request = rq
         return handler(rq)
 
-    api = app.create_registry()
+    api = core.create_registry()
     handler = web.handler(api.registry)
     wsgi = web.wsgi_wrapper(handle_request, factory=TestContext)
     wsgi.api = api
