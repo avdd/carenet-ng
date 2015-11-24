@@ -1,12 +1,23 @@
 from __future__ import absolute_import
 __metaclass__ = type
 
+import uuid
+import datetime
+import dateutil.parser
+
+from carenetng.registry import create_registry
+
 import logging
 log = logging.getLogger(__name__)
 
 #from . import crowd
 #from sqlalchemy import create_engine
 #create_engine('postgresql:///cf_crowd_devel')
+
+registry = {}
+api = create_registry(registry)
+converter = api._converter
+
 
 class context:
     def __init__(self, *args):
@@ -17,29 +28,5 @@ class context:
         ok = 'devel-only', 'password'
         if (username, password) == ok:
             return True
-
-
-def create_registry(registry=None):
-
-    def factory(__key=None, **__spec):
-        def decorator(f):
-            _register(registry, f, __key, __spec)
-            return f
-        return decorator
-
-    def _register(registry, f, key, spec):
-        if key is None:
-            key = f.__name__
-        registry[key] = (f, spec)
-
-    if registry is None:
-        registry = {}
-
-    factory.registry = registry
-    return factory
-
-
-registry = {}
-api = create_registry(registry)
 
 

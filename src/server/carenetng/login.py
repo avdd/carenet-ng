@@ -12,17 +12,9 @@ from .core import api
 def login(cx, username, password):
     if cx.authenticate(username, password):
         return create_session(cx, username)
-    else:
-        pass
-        #raise LoginFailed
-        #assert 0
 
 
 def create_session(cx, user):
     return True
-
-
-class LoginFailed(Exception):
-    message = 'Login failed, you fool!'
 
 

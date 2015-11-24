@@ -13,6 +13,5 @@ logging.basicConfig(disable_existing_loggers=False)
 
 # now import everything
 
-import carenetng.core
 import carenetng.login
 

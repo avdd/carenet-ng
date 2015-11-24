@@ -5,9 +5,9 @@ __metaclass__ = type
 
 import os
 import sys
-import json
 import uuid
 import datetime
+import simplejson as json
 
 from werkzeug.wrappers import Request, Response
 
@@ -41,19 +41,19 @@ def _dispatch(registry, rq):
     path = rq.path[len(script_name):]
 
     try:
-        f, spec = registry[path]
+        f = registry[path]
     except KeyError:
         return _response_error(404, 'Not found')
 
     try:
-        if not _check_request(rq, spec):
+        if not _check_request(rq, f):
             return _response_error(403, 'Not allowed')
     except:
         log.exception('%s error checking access', rq.path)
-        return _response_error(403, 'Not allowed')
+        return _response_error(500, 'Internal server error')
 
     try:
-        args = _process_args(rq, spec)
+        args = _process_args(rq, f)
     except:
         log.exception('%s error processing request args', rq.path)
         return _response_error(400, 'Bad request')
@@ -66,11 +66,15 @@ def _dispatch(registry, rq):
         return _response_error(500, 'Internal server error')
 
 
-def _check_request(rq, spec):
-    return True
+def _check_request(rq, f):
+    spec = f.__api_check
+    if spec is True:
+        return True
+    return spec(rq)
 
 
-def _process_args(rq, spec):
+def _process_args(rq, f):
+    spec = f.__api_arg_spec
     j = _request_json(rq) or {}
     rqargs = rq.args
     out = {}
