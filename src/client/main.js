@@ -87,17 +87,26 @@ function AppService(CONFIG, $http, $q) {
   this.session = null;
   this.requested_url = DEFAULT_SCREEN;
 
-  this.authenticate = function authenticate(args) {
-    var url = CONFIG.api + '/login';
-    return $http.post(url, args).then(ok)
+  function callApi(id, args) {
+    var url = CONFIG.api + '/' + id;
+    return $http.post(url, args).then(ok).catch(fail);
     function ok(rsp) {
-      var data = rsp.data,
-          error = data && data.error;
+      var data = rsp.data;
       if (data && data.result)
-        return self.session = data.result;
+        return data.result;
       else
-        return $q.reject(error || new Error('Unknown error (HTTP OK)'));
+        return $q.reject(rsp);
     }
+    function fail(rsp) {
+      var data = rsp.data;
+      return $q.reject(data ? data.error : {'message': 'Network error'});
+    }
+  }
+
+  this.authenticate = function authenticate(args) {
+    return callApi('login', args).then(function (result) {
+      return self.session = result;
+    });
   }
 
   this.getSession = function getSession(url) {
@@ -127,7 +136,7 @@ function LoginCtrl(App, $location) {
       $location.path(App.requested_url).replace();
     }
     function fail(e) {
-      self.form_message = e.message || 'Unknown error (HTTP Failed)';
+      self.form_message = e ? e.message : 'Login failed';
     }
   }
 }

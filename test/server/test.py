@@ -27,15 +27,13 @@ def _authenticate(u, p):
 
 
 def test_login_rejects_invalid_user(cx):
-    with pytest.raises(login.LoginFailed):
-        r = login.login(cx, 'invalid', 'invalid')
-        assert r is None
+    r = login.login(cx, 'invalid', 'invalid')
+    assert r is None
 
 
 def test_login_rejects_invalid_password(cx):
-    with pytest.raises(login.LoginFailed):
-        r = login.login(cx, 'test-user', 'invalid')
-        assert r is None
+    r = login.login(cx, 'test-user', 'invalid')
+    assert r is None
 
 
 def test_login_accepts_valid_user(cx):

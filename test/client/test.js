@@ -158,7 +158,7 @@ describe('LoginCtrl', function () {
   it('handles auth failure', function () {
     spyOn(_.App, 'authenticate').and.callFake(function (args) {
       return _.$q(function (resolve, reject) {
-        reject({message: 'Login failed'});
+        reject();
       });
     });
 
@@ -166,6 +166,19 @@ describe('LoginCtrl', function () {
     ctrl.submit();
     _.$rootScope.$apply();
     expect(ctrl.form_message).toEqual('Login failed');
+  });
+
+  it('handles auth failure with message', function () {
+    spyOn(_.App, 'authenticate').and.callFake(function (args) {
+      return _.$q(function (resolve, reject) {
+        reject({message: 'A problem'});
+      });
+    });
+
+    var ctrl = _.$controller('LoginCtrl');
+    ctrl.submit();
+    _.$rootScope.$apply();
+    expect(ctrl.form_message).toEqual('A problem');
   });
 });
 

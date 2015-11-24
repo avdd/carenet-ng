@@ -13,9 +13,9 @@ def login(cx, username, password):
     if cx.authenticate(username, password):
         return create_session(cx, username)
     else:
-        raise LoginFailed
+        pass
+        #raise LoginFailed
         #assert 0
-        #pass
 
 
 def create_session(cx, user):
