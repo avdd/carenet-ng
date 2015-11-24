@@ -23,8 +23,12 @@ function Inject() {
   return inject(names.concat([receiveDeps]));
 
   function receiveDeps() {
-    for (var i=0; i<names.length; ++i)
-      _[names[i]] = arguments[i];
+    for (var i=0; i<names.length; ++i) {
+      var name = names[i];
+      if (name[0] === '$')
+        name = name.substring(1)
+      _[name] = arguments[i];
+    }
   }
 }
 
@@ -35,20 +39,20 @@ describe('Test sanity', function () {
 
   it('has angular', function () {
     expect(angular).toBeDefined();
-    expect(_.$q).toBeDefined();
+    expect(_.q).toBeDefined();
   });
 
   it('injects deps', function () {
     Inject('$log');
-    expect(_.$log).toBeDefined();
-    expect(_.$q).toBeDefined();
+    expect(_.log).toBeDefined();
+    expect(_.q).toBeDefined();
   });
 
   it('should not leak dependencies', function () {
     Inject('$http');
-    expect(_.$http).toBeDefined();
-    expect(_.$q).toBeDefined();
-    expect(_.$log).not.toBeDefined();
+    expect(_.q).toBeDefined();
+    expect(_.http).toBeDefined();
+    expect(_.log).not.toBeDefined();
   });
 });
 
@@ -58,8 +62,8 @@ describe('RemoveOnLoadDirective', function () {
   beforeEach(Inject('$compile', '$rootScope'));
   
   it('removes the element', function  () {
-    var scope = _.$rootScope.$new();
-    var el = _.$compile('<p><span remove-on-load> blah </span>')(scope);
+    var scope = _.rootScope.$new();
+    var el = _.compile('<p><span remove-on-load> blah </span>')(scope);
     scope.$apply();
     expect(el.html()).toEqual('');
   });
@@ -71,11 +75,11 @@ describe('AutofocusDirective', function () {
   beforeEach(Inject('$timeout', '$compile', '$rootScope'));
   
   it('calls focus on element', function  () {
-    var scope = _.$rootScope.$new();
-    var el = _.$compile('<input autofocus>')(scope);
+    var scope = _.rootScope.$new();
+    var el = _.compile('<input autofocus>')(scope);
     var focused = false
     el[0].focus = function () { focused = true; }
-    _.$timeout.flush();
+    _.timeout.flush();
     expect(focused).toBe(true);
   });
 });
@@ -83,41 +87,41 @@ describe('AutofocusDirective', function () {
 
 describe('RouteConfig', function () {
 
-  beforeEach(Inject('$location', '$rootScope', '$httpBackend',
-                    '$route', 'App',
-                    '$controller'));
+  beforeEach(Inject('$location', '$rootScope', '$httpBackend', '$route'));
 
   afterEach(function () {
-    _.$httpBackend.verifyNoOutstandingExpectation();
-    _.$httpBackend.verifyNoOutstandingRequest();
+    _.httpBackend.verifyNoOutstandingExpectation();
+    _.httpBackend.verifyNoOutstandingRequest();
   })
 
   it('redirects to login', function () {
-    _.$httpBackend.expectGET('templates/main.html').respond(200);
-    _.$httpBackend.expectGET('templates/login_form.html').respond(200);
-    _.$location.path('/view/main');
-    _.$httpBackend.flush();
-    expect(_.$location.url()).toEqual('/form/login');
-    expect(_.$route.current.controller).toBe('LoginCtrl')
+    _.httpBackend.expectGET('templates/main.html').respond(200);
+    _.httpBackend.expectGET('templates/login_form.html').respond(200);
+    _.location.path('/view/main');
+    _.httpBackend.flush();
+    expect(_.location.url()).toEqual('/form/login');
+    expect(_.route.current.controller).toBe('LoginCtrl')
   });
 
   it('login redirects if logged in', function () {
+    Inject('App');
     _.App.session = true;
-    _.$httpBackend.expectGET('templates/login_form.html').respond(200);
-    _.$httpBackend.expectGET('templates/main.html').respond(200);
-    _.$location.path('/form/login');
-    _.$httpBackend.flush();
-    expect(_.$location.url()).toEqual('/view/main');
-    expect(_.$route.current.controller).toBe('ViewCtrl')
+    _.httpBackend.expectGET('templates/login_form.html').respond(200);
+    _.httpBackend.expectGET('templates/main.html').respond(200);
+    _.location.path('/form/login');
+    _.httpBackend.flush();
+    expect(_.location.url()).toEqual('/view/main');
+    expect(_.route.current.controller).toBe('ViewCtrl')
   });
 
   it('doesn\'t redirect if logged in', function () {
+    Inject('App');
     _.App.session = true;
-    _.$httpBackend.expectGET('templates/main.html').respond(200);
-    _.$location.path('/view/main');
-    _.$httpBackend.flush();
-    expect(_.$location.url()).toEqual('/view/main');
-    expect(_.$route.current.controller).toBe('ViewCtrl')
+    _.httpBackend.expectGET('templates/main.html').respond(200);
+    _.location.path('/view/main');
+    _.httpBackend.flush();
+    expect(_.location.url()).toEqual('/view/main');
+    expect(_.route.current.controller).toBe('ViewCtrl')
   });
 });
 
@@ -127,7 +131,7 @@ describe('LoginCtrl', function () {
   beforeEach(Inject('$controller', '$rootScope', '$q', 'App'));
 
   it('is submittable only with form filled', function () {
-    var ctrl = _.$controller('LoginCtrl');
+    var ctrl = _.controller('LoginCtrl');
     expect(ctrl.submittable).toBe(false);
     ctrl.form_data = {username: '', password: ''};
     ctrl.changed();
@@ -139,45 +143,38 @@ describe('LoginCtrl', function () {
 
   it('handles auth success', function () {
     spyOn(_.App, 'authenticate').and.callFake(function (args) {
-      return _.$q(function (resolve, reject) {
-        if (args.password === 'magoo')
-          resolve({result:true});
-        else
-          reject({message: 'Login failed'});
+      return _.q(function (resolve, reject) {
+        resolve({result:true});
       });
     });
-
-    var ctrl = _.$controller('LoginCtrl');
-    ctrl.form_data = {username: 'foo', password: 'magoo'};
+    var ctrl = _.controller('LoginCtrl');
     ctrl.submit();
     expect(_.App.authenticate).toHaveBeenCalled();
-    _.$rootScope.$apply();
+    _.rootScope.$apply();
     expect(ctrl.form_message).toEqual('');
   });
 
   it('handles auth failure', function () {
     spyOn(_.App, 'authenticate').and.callFake(function (args) {
-      return _.$q(function (resolve, reject) {
+      return _.q(function (resolve, reject) {
         reject();
       });
     });
-
-    var ctrl = _.$controller('LoginCtrl');
+    var ctrl = _.controller('LoginCtrl');
     ctrl.submit();
-    _.$rootScope.$apply();
+    _.rootScope.$apply();
     expect(ctrl.form_message).toEqual('Login failed');
   });
 
   it('handles auth failure with message', function () {
     spyOn(_.App, 'authenticate').and.callFake(function (args) {
-      return _.$q(function (resolve, reject) {
+      return _.q(function (resolve, reject) {
         reject({message: 'A problem'});
       });
     });
-
-    var ctrl = _.$controller('LoginCtrl');
+    var ctrl = _.controller('LoginCtrl');
     ctrl.submit();
-    _.$rootScope.$apply();
+    _.rootScope.$apply();
     expect(ctrl.form_message).toEqual('A problem');
   });
 });
@@ -189,25 +186,25 @@ describe('App.authenticate', function () {
 
   it('handles success', function () {
     var url = _.CONFIG.api + '/login';
-    _.$httpBackend.expectPOST(url).respond({result: true});
+    _.httpBackend.expectPOST(url).respond({result: true});
     _.App.authenticate();
-    _.$httpBackend.flush();
+    _.httpBackend.flush();
     expect(_.App.getSession()).toBe(true);
   });
 
   it('handles auth failure', function () {
     var url = _.CONFIG.api + '/login';
-    _.$httpBackend.expectPOST(url).respond({error: {message: 'Login failed'}});
+    _.httpBackend.expectPOST(url).respond({error: {message: 'Login failed'}});
     _.App.authenticate();
-    _.$httpBackend.flush();
+    _.httpBackend.flush();
     expect(_.App.getSession()).toBeFalsy();
   });
 
   it('handles API non-response', function () {
     var url = _.CONFIG.api + '/login';
-    _.$httpBackend.expectPOST(url).respond();
+    _.httpBackend.expectPOST(url).respond();
     _.App.authenticate();
-    _.$httpBackend.flush();
+    _.httpBackend.flush();
     expect(_.App.getSession()).toBeFalsy();
   });
 
@@ -219,7 +216,7 @@ describe('ViewCtrl', function () {
   beforeEach(Inject('$controller'))
 
   it('says hello', function () {
-    var ctrl = _.$controller('ViewCtrl');
+    var ctrl = _.controller('ViewCtrl');
     expect(ctrl.message).toEqual('Hello');
   });
 });
