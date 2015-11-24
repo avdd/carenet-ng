@@ -1,17 +1,28 @@
-# -*- coding: utf8 -*-
+# forward-compat boilerplate
+from __future__ import absolute_import
+__metaclass__ = type
 
-from . import api
-from .app import app
+import logging
+log = logging.getLogger(__name__)
 
-@api('login')
-def login(cx):
-    u = cx.arg.get('username') or ''
-    p = cx.arg.get('password') or ''
-    result = app.authenticate(cx, u, p)
+from .app import api
 
-    if result:
-        return {'result': result}
+
+@api(username=str, password=str)
+def login(cx, username, password):
+    if cx.authenticate(username, password):
+        return create_session(cx, username)
     else:
-        return {'error': {'message': 'Login failed'}}
+        raise LoginFailed
+        #assert 0
+        #pass
+
+
+def create_session(cx, user):
+    return True
+
+
+class LoginFailed(Exception):
+    message = 'Login failed, you fool!'
 
 

@@ -55,7 +55,7 @@ describe('login', function () {
     element(by.tagName('form')).submit();
     expectUrl('form/login');
     expect(element(by.exactBinding('self.form_message')).getText())
-      .toContain('failed');
+      .toMatch(/failed/i);
   });
 
   it('accepts valid credentials', function () {

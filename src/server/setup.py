@@ -8,8 +8,8 @@ setup(
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'carenet-cgi = carenetng.run:serve_cgi',
-            'carenet-upgrade = carenetng.run:upgrade_db'
+            'carenet-cgi = carenetng.run:cgi',
+            'carenet-ctl = carenetng.run:main'
         ]
     })
 

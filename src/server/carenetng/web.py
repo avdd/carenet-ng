@@ -6,23 +6,30 @@ __metaclass__ = type
 import os
 import sys
 import json
+import uuid
 import datetime
 
-from werkzeug import exceptions
-from werkzeug.wrappers import (Request as BaseRequest,
-                               Response as BaseResponse)
+from werkzeug.wrappers import Request, Response
 
 import logging
 log = logging.getLogger(__name__)
 
 
-def cgi(wsgi): # pragma: no cover
-    def handle(environ, start_response):
-        if environ.get('HTTP_X_FORWARDED_PROTO') == 'https':
-            environ['wsgi.url_scheme'] = 'https'
-        return wsgi(environ, start_response)
-    from wsgiref.handlers import CGIHandler
-    return lambda: CGIHandler().run(handle)
+def wsgi_wrapper(handler, factory):
+
+    def _wsgi_app(environ, start_response):
+        rq = Request(environ)
+        environ['werkzeug.request'] = None
+        cx = rq.context = factory()
+        try:
+            rsp = handler(rq)
+        finally:
+            rq.close()
+            if hasattr(cx, 'close'):
+                cx.close()
+        return rsp(environ, start_response)
+
+    return _wsgi_app
 
 
 def handler(registry):
@@ -36,28 +43,37 @@ def _dispatch(registry, rq):
     try:
         f, spec = registry[path]
     except KeyError:
-        return exceptions.NotFound()
+        return _response_error(404, 'Not found')
 
     try:
-        args = _process_args(spec, rq)
-    except Exception, e:
-        log.exception('error processing json args')
-        return exceptions.BadRequest(e)
+        if not _check_request(rq, spec):
+            return _response_error(403, 'Not allowed')
+    except:
+        log.exception('%s error checking access', rq.path)
+        return _response_error(403, 'Not allowed')
+
+    try:
+        args = _process_args(rq, spec)
+    except:
+        log.exception('%s error processing request args', rq.path)
+        return _response_error(400, 'Bad request')
 
     try:
         result = f(rq.context, **args)
-        rsp = {'result': result}
-    except Exception, e:
-        raise
-        #log.exception('error handling request; %s', e)
-        #rsp = {'error': {'message': e.message or 'Unknown error'}}
-    data = json.dumps(rsp, cls=JSONEncoder)
-    return WsgiResponse((data, '\n'), mimetype='application/json')
+        return _response_json(200, {'result': result})
+    except:
+        log.exception('%s unhandled exception', rq.path)
+        return _response_error(500, 'Internal server error')
 
 
 
-def _process_args(spec, rq):
-    j = get_json(rq) or {}
+
+def _check_request(rq, spec):
+    return True
+
+
+def _process_args(rq, spec):
+    j = _request_json(rq) or {}
     rqargs = rq.args
     out = {}
     for k, t in spec.items():
@@ -72,7 +88,7 @@ def _process_args(spec, rq):
     return out
 
 
-def get_json(rq):
+def _request_json(rq):
     mt = rq.mimetype
     if mt != 'application/json':
         if not (mt.startswith('application/') and mt.endswith('+json')):
@@ -83,65 +99,27 @@ def get_json(rq):
     kw = {'cls': JSONDecoder}
     if charset is not None:
         kw['encoding'] = charset
-    try:
-        return json.loads(data, **kw)
-    except ValueError as e:
-        log.error('Failed to decode JSON object: {0}'.format(e))
-        raise exceptions.BadRequest()
+    return json.loads(data, **kw)
 
 
-class WsgiWrapper:
-
-    debug = False
-
-    def __init__(self, handler, factory, config=None):
-        self.handler = handler
-        self.context_factory = factory
-        self.config = config
-
-    def wsgi_app(self, environ, start_response):
-        cx = self.context_factory()
-        rq = WsgiRequest(self, cx, environ)
-        try:
-            rsp = self.handler(rq)
-        except:
-            msg = 'Unhandled exception in %s %s' % (rq.method, rq.path)
-            log.exception(msg)
-            rsp = exceptions.InternalServerError()
-        finally:
-            rq.close()
-            if hasattr(cx, 'close'):
-                cx.close()
-
-        return rsp(environ, start_response)
-
-    __call__ = wsgi_app
+def _response_error(code, message):
+    return _response_json(code, {'error': {'message': message}})
 
 
-
-class WsgiResponse(BaseResponse):
-    default_mimetype = 'text/plain'
-
-
-class WsgiRequest(BaseRequest):
-
-    def __init__(self, app, cx, environ):
-        BaseRequest.__init__(self, environ)
-        # clean up circular dependencies
-        environ['werkzeug.request'] = None
-        self.context = cx
-        self.app = app
-        self.debug = app.debug
-        #self.max_content_length = app.config['MAX_CONTENT_LENGTH'] or None
+def _response_json(code, obj):
+    data = json.dumps(obj, cls=JSONEncoder)
+    return Response((data, '\n'),
+                    status=code,
+                    mimetype='application/json')
 
 
 class JSONEncoder(json.JSONEncoder):
-    def default(self, o): # pragma: no cover
-        if isinstance(o, datetime.date):
-            return str(o)
-        if isinstance(o, uuid.UUID):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
+    def default(self, x):
+        if isinstance(x, datetime.date):
+            return str(x)
+        if isinstance(x, uuid.UUID):
+            return str(x)
+        return json.JSONEncoder.default(self, x)
 
 
 class JSONDecoder(json.JSONDecoder):

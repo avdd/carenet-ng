@@ -1,62 +1,50 @@
+from __future__ import absolute_import
+__metaclass__ = type
 
 import pytest
-from carenetng.app import app
 
+from carenetng import app
+from carenetng import login
 # from carenetng import crowd
 
 
-TEST_USERS = {
-    'test-user': 'test password',
-    'test-user-2': 'test password 2',
-}
+@pytest.fixture()
+def cx():
+    cx = app.context()
+    cx.authenticate = _authenticate
+    return cx
 
 
-@pytest.fixture(autouse=True)
-def test_setup():
-    app.authenticate = _authenticate
-
-
-def _authenticate(cx, u, p):
-    pw = TEST_USERS.get(u)
+def _authenticate(u, p):
+    test_users = {
+        'test-user': 'test password',
+        'test-user-2': 'test password 2',
+    }
+    pw = test_users.get(u)
     return pw and pw == p or False
 
 
-def test_login_rejects_invalid():
-    rv = app.client().send('login', {})
-    assert rv.json
-    assert 'error' in rv.json
-    assert 'result' not in rv.json
 
 
-def test_login_rejects_invalid_user():
-    rv = app.client().send('login', {'username': 'nope'})
-    assert rv.json
-    assert 'error' in rv.json
-    assert 'result' not in rv.json
+def test_login_rejects_invalid_user(cx):
+    with pytest.raises(login.LoginFailed):
+        r = login.login(cx, 'invalid', 'invalid')
+        assert r is None
 
 
-def test_login_rejects_invalid_password():
-    args = {'username': 'test-user',
-            'password': 'wrong password'}
-    rv = app.client().send('login', args)
-    assert rv.json
-    assert 'error' in rv.json
-    assert 'result' not in rv.json
+def test_login_rejects_invalid_password(cx):
+    with pytest.raises(login.LoginFailed):
+        r = login.login(cx, 'test-user', 'invalid')
+        assert r is None
 
 
-def test_login_accepts_valid_user():
-    args = {'username': 'test-user',
-            'password': 'test password'}
-    rv = app.client().send('login', args)
-    assert 'result' in rv.json
-    assert rv.json['result']
+def test_login_accepts_valid_user(cx):
+    r = login.login(cx, 'test-user', 'test password')
+    assert r is True
 
 
-def test_login_accepts_second_valid_user():
-    args = {'username': 'test-user-2',
-            'password': 'test password 2'}
-    rv = app.client().send('login', args)
-    assert 'result' in rv.json
-    assert rv.json['result']
+def test_login_accepts_second_valid_user(cx):
+    r = login.login(cx, 'test-user-2', 'test password 2')
+    assert r is True
 
 

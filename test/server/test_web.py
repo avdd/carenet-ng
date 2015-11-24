@@ -13,13 +13,13 @@ class TestContext:
         pass
 
 
-def _make_api():
+def _make_wsgi():
 
     from werkzeug.test import Client
 
     def call(url, data=None, json_data=None,
              content_type='application/json', encoding='utf-8'):
-        c = Client(wsgi, web.WsgiResponse)
+        c = Client(wsgi, web.Response)
         if json_data is not None:
             content_type='application/json'
         elif 'json' in content_type:
@@ -28,27 +28,28 @@ def _make_api():
                      content_type=content_type,
                      headers=[('accept', 'application/json')],
                      data=json_data)
-        if 'json' in rsp.mimetype:
-            rsp.json = json.loads(rsp.data)
-        else:
-            rsp.json = None
+        assert 'json' in rsp.mimetype
+        rsp.json = json.loads(rsp.data)
+        assert rsp.json is not None
         return rsp
 
     def handle_request(rq):
-        api.request = rq
+        wsgi.request = rq
         return handler(rq)
 
     api = app.create_registry()
-    api.call = call
     handler = web.handler(api.registry)
-    wsgi = web.WsgiWrapper(handle_request, factory=TestContext)
-    return api
+    wsgi = web.wsgi_wrapper(handle_request, factory=TestContext)
+    wsgi.api = api
+    wsgi.call = call
+    return wsgi
 
 
 @pytest.fixture
 def testapi():
     import datetime
-    api = _make_api()
+    wsgi = _make_wsgi()
+    api = wsgi.api
 
     def isodate(s):
         return datetime.date(*map(int, s.split('-')))
@@ -66,36 +67,42 @@ def testapi():
     def empty(cx):
         return None
 
-    return api
+    @api()
+    def uuid(cx):
+        import uuid
+        return uuid.UUID('ea676bb8-26f8-4729-93d1-65dbd5fbdd65')
+
+    @api()
+    def bad(cx):
+        return object()
+
+    return wsgi
 
 
 def test_not_json(testapi):
-    rsp = testapi.call('empty', 'not json', content_type='')
+    rsp = testapi.call('empty', 'not json', content_type='text/plain')
     assert rsp.status_code == 200
+    assert rsp.json == {'result': None}
 
 def test_notfound(testapi):
     rsp = testapi.call('foo')
     assert rsp.status_code == 404
-    #assert 'error' in rsp.json
-    #assert '404' in rsp.json['error']
+    assert rsp.json == {'error': {'message': 'Not found'}}
 
 def test_validate_missing(testapi):
     rsp = testapi.call('addDate')
     assert rsp.status_code == 400
-    #assert 'error' in rsp.json
-    #assert '400' in rsp.json['error']
+    assert rsp.json == {'error': {'message': 'Bad request'}}
 
 def test_validate_badarg(testapi):
     rsp = testapi.call('addDate', {'d':1, 'i': 'x'})
     assert rsp.status_code == 400
-    #assert 'error' in rsp.json
-    #assert '400' in rsp.json['error']
+    assert rsp.json == {'error': {'message': 'Bad request'}}
 
 def test_dates(testapi):
     args = {'d': '2001-01-01', 'i': 2}
     rsp = testapi.call('addDate', args)
     assert rsp.status_code == 200
-    #expect = 'Wed, 03 Jan 2001 00:00:00 GMT'
     expect = '2001-01-03'
     assert rsp.json == {'result': expect}
 
@@ -108,15 +115,23 @@ def test_strings(testapi):
 def test_validate_exception(testapi):
     args = {'d': '2001-01-01', 'i': 0}
     rsp = testapi.call('addDate', args)
-    #assert rsp.status_code == 200
     assert rsp.status_code == 500
-    #assert 'error' in rsp.json
-    #assert 'assert' in rsp.json['error']['message']
+    assert rsp.json == {'error': {'message': 'Internal server error'}}
 
 def test_empty(testapi):
     rsp = testapi.call('empty')
     assert rsp.status_code == 200
     assert rsp.json == {'result': None}
+
+def test_uuid(testapi):
+    rsp = testapi.call('uuid')
+    assert rsp.status_code == 200
+    assert rsp.json == {'result': 'ea676bb8-26f8-4729-93d1-65dbd5fbdd65'}
+
+def test_bad_response(testapi):
+    rsp = testapi.call('bad')
+    assert rsp.status_code == 500
+    assert rsp.json == {'error': {'message': 'Internal server error'}}
 
 def test_context(testapi):
     testapi.call('empty')
@@ -140,5 +155,5 @@ def test_bad_json(testapi):
     arg = 'not json'
     rsp = testapi.call('concat', json_data=arg)
     assert rsp.status_code == 400
-    #assert rsp.json is None
+    assert rsp.json == {'error': {'message': 'Bad request'}}
 

@@ -1,10 +1,11 @@
-# forward-compat boilerplate
 from __future__ import absolute_import
 __metaclass__ = type
 
 import os
 import hashlib
 import datetime
+import logging
+log = logging.getLogger(__name__)
 
 from sqlalchemy import (
     Column,

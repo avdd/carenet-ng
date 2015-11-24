@@ -1,74 +1,45 @@
-# -*- coding: utf8 -*-
+from __future__ import absolute_import
+__metaclass__ = type
 
-import os
-import sys
-import flak
-import functools
+import logging
+log = logging.getLogger(__name__)
 
-ENVIRON_KEY = 'CARENET_ENV'
+#from . import crowd
+#from sqlalchemy import create_engine
+#create_engine('postgresql:///cf_crowd_devel')
 
-app = flak.Flak(__name__, root_path=sys.prefix)
-app.app_env = os.environ.get(ENVIRON_KEY)
+class context:
+    def __init__(self, *args):
+        self.args = args
+        log.info('CONTEXT OPENED: args=%s', args)
 
-app.config['CROWD_DB_URL'] = 'postgresql://cf_crowd@:5433/cf_crowd_live'
-app.config['CROWD_DB_URL'] = 'postgresql:///crowdtest'
-
-
-from . import crowd
-from sqlalchemy import create_engine
-from sqlalchemy.orm import create_session
-
-
-def authenticate(cx, u, p): # pragma: no cover
-    url = app.config['CROWD_DB_URL']
-    db = create_session(create_engine(url))
-    try:
-        u = crowd.get_authenticated_user(db, u, p)
-    except crowd.SecurityException:
-        return False
-    else:
-        return True
-
-app.authenticate = authenticate
+    def authenticate(self, username, password):
+        ok = 'devel-only', 'password'
+        if (username, password) == ok:
+            return True
 
 
-def route(url):
-    return app.route('/' + url, methods=['GET', 'POST'])
+def create_registry(registry=None):
+
+    def factory(__key=None, **__spec):
+        def decorator(f):
+            _register(registry, f, __key, __spec)
+            return f
+        return decorator
+
+    def _register(registry, f, key, spec):
+        if key is None:
+            key = f.__name__
+        registry[key] = (f, spec)
+
+    if registry is None:
+        registry = {}
+
+    factory.registry = registry
+    return factory
 
 
-def api(url):
-    decorated = route(url)
-    def decorator(f):
-        f = as_json(f)
-        return decorated(f)
-    return decorator
-
-def as_json(f):
-    @functools.wraps(f)
-    def handle(cx):
-        cx.arg = cx.get_json() or {}
-        result = f(cx)
-        status = 200
-        headers = [('Content-Type', 'application/json')]
-        return cx.dumps(result), status, headers
-    return handle
-
-@api('ping')
-def ping(cx): # pragma: no cover
-    #e = cx.request.environ
-    #print >>sys.stderr, e.get('REQUEST_ENV')
-    env = app.app_env or 'UNDEFINED'
-    rqenv = cx.request.environ.get('REQUEST_ENV', 'UNDEFINED')
-    headers = [('x-app-env', env),
-               ('x-request-env', rqenv)]
-    return 'PONG ' + env
-
-@app.errorhandler(Exception)
-def error(cx, e): # pragma: no cover
-    import traceback; traceback.print_exc()
-    status = 500
-    headers = [('Content-Type', 'application/json')]
-    result = {'error': str(e)}
-    return cx.dumps(result), status, headers
+registry = {}
+api = create_registry(registry)
 
 
