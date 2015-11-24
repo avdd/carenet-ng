@@ -641,7 +641,7 @@ _activate_release() {
     --log-file  $logfile \
     --access-logfile  $accesslog \
     --daemon \
-    carenetng.run:wsgi
+    carenetng.__main__:wsgi
 }
 
 
