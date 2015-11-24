@@ -340,14 +340,18 @@ _do_setup() {
     PYTHON=$(readlink -f .cache/python)
     virtualenv $PYTHON
   fi
+  echo 'updating webdriver'
+  npm run gulp update-webdriver
+  _do_setup_python
+}
+
+_do_setup_python() {
   _init_build
   echo 'building python deps'
   _build_wheel_deps
   pip=$PYTHON/bin/pip
   $pip install --no-deps --no-index -f $WHEELHOUSE -r $PYTHON_REQUIRES
-  (cd src/server && $pip install -e .)
-  echo 'updating webdriver'
-  npm run gulp update-webdriver
+  (cd src/server && $pip uninstall -y carenet-ng && $pip install -e .)
 }
 
 
@@ -639,7 +643,7 @@ _activate_release() {
     --log-file  $logfile \
     --access-logfile  $accesslog \
     --daemon \
-    carenetng.run:app
+    carenetng.run:wsgi
 }
 
 
