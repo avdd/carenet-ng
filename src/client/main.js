@@ -95,7 +95,8 @@ function AppService(CONFIG, $http, $q) {
           error = data && data.error;
       if (data && data.result)
         return self.session = data.result;
-      return $q.reject(error || new Error('unknown error'));
+      else
+        return $q.reject(error || new Error('Unknown error (HTTP OK)'));
     }
   }
 
@@ -126,7 +127,7 @@ function LoginCtrl(App, $location) {
       $location.path(App.requested_url).replace();
     }
     function fail(e) {
-      self.form_message = e.message;
+      self.form_message = e.message || 'Unknown error (HTTP Failed)';
     }
   }
 }
