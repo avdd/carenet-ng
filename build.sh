@@ -320,6 +320,12 @@ _do_setup_links() {
 _do_setup() {
   # must be idempotent!
   _check_local
+  _do_setup_client
+  _do_setup_server
+}
+
+_do_setup_client() {
+  _check_local
   mkdir -p .cache/publish
   echo 'installing npm deps'
   if [[ -L .cache ]]
@@ -331,22 +337,22 @@ _do_setup() {
   echo 'installing bower deps'
   npm run bower install
   ln -sfv $GULP_JS gulp
+  echo 'updating webdriver'
+  npm run gulp update-webdriver
+}
+
+_do_setup_server() {
+  _check_local
   echo 'setting up python environment'
+  _init_build
   if [[ "${VIRTUAL_ENV:-}" ]]
   then
     PYTHON=$VIRTUAL_ENV
     ln -sfnv $PYTHON .cache/python
   else
     PYTHON=$(readlink -f .cache/python)
-    virtualenv $PYTHON
+    test -x $PYTHON/bin/python || virtualenv $PYTHON
   fi
-  echo 'updating webdriver'
-  npm run gulp update-webdriver
-  _do_setup_python
-}
-
-_do_setup_python() {
-  _init_build
   echo 'building python deps'
   _build_wheel_deps
   pip=$PYTHON/bin/pip
