@@ -6,7 +6,8 @@ env:
 
 before_install:
   - "sh -e /etc/init.d/xvfb start"
-  - nvm install 0.10
+  - nvm ls
+  - nvm use 4.1
   - npm install -g npm@3
 
 install: 
