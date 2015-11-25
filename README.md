@@ -4,7 +4,7 @@
 # Requirements
 
 - git
-- node (0.10)
+- node (4.x)
 - python (2.7)
 - virtualenv
 - rsync
@@ -27,9 +27,8 @@ Run `./build.sh setup` which does, roughly, this:
 - npm install
 - npm run bower install
 - virtualenv .cache/python
-- pip wheel -w .cache/wheelhouse github:/avdd/flak/
-- pip wheel -f .cache/wheelhouse -w .cache/wheelhouse -r pyreq-devel.txt
-- pip install -f .cache/wheelhouse -r pyreq-devel.txt
+- pip wheel -f .cache/wheelhouse -w .cache/wheelhouse -r python-requires.txt
+- pip install -f .cache/wheelhouse -r python-requires.txt
 - (cd src/server && pip install -e .)
 
 Then you can `./gulp test`
