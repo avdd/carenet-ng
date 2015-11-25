@@ -37,8 +37,9 @@ def handler(registry):
 
 
 def _dispatch(registry, rq):
-    script_name = rq.environ.get('SCRIPT_NAME') or '/'
-    path = rq.path[len(script_name):]
+    path = rq.path
+    if path and path[0] == '/':
+        path = path[1:]
 
     try:
         f = registry[path]

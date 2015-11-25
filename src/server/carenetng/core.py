@@ -1,18 +1,10 @@
 from __future__ import absolute_import
 __metaclass__ = type
 
-import uuid
-import datetime
-import dateutil.parser
-
-from carenetng.registry import create_registry
-
 import logging
-log = logging.getLogger(__name__)
+from .registry import create_registry
 
-#from . import crowd
-#from sqlalchemy import create_engine
-#create_engine('postgresql:///cf_crowd_devel')
+log = logging.getLogger(__name__)
 
 registry = {}
 api = create_registry(registry)
@@ -20,13 +12,9 @@ converter = api._converter
 
 
 class context:
-    def __init__(self, *args):
-        self.args = args
-        log.info('CONTEXT OPENED: args=%s', args)
-
-    def authenticate(self, username, password):
-        ok = 'devel-only', 'password'
-        if (username, password) == ok:
-            return True
-
+    def __init__(self, config=None):
+        if config:
+            self.__dict__.update(config)
+        msg = '\n'.join('  %s=%r' % x for x in config.items())
+        log.info('CONTEXT OPENED:\n%s', msg)
 

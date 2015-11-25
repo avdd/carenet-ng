@@ -10,6 +10,7 @@ var LOGIN_SCREEN = '/form/login';
 angular.module(window.CONFIG.app, window.CONFIG.deps)
   .constant('CONFIG', window.CONFIG)
   .service('App', AppService)
+  .service('Api', ApiService)
   .controller('LoginCtrl', LoginCtrl)
   .controller('ViewCtrl', ViewCtrl)
   .directive('autofocus', AutofocusDirective)
@@ -82,30 +83,37 @@ function appConfig($routeProvider) {
 
 }
 
-function AppService(CONFIG, $http, $q) {
-  var self = this;
-  this.session = null;
-  this.requested_url = DEFAULT_SCREEN;
-
+function ApiService(CONFIG, $http, $q) {
+  this.call = callApi;
   function callApi(id, args) {
     var url = CONFIG.api + '/' + id;
     return $http.post(url, args).then(ok).catch(fail);
     function ok(rsp) {
       var data = rsp.data;
-      if (data && data.result)
+      if (data && data.result !== undefined)
         return data.result;
       else
         return $q.reject(rsp);
     }
     function fail(rsp) {
       var data = rsp.data;
-      return $q.reject(data ? data.error : {'message': 'Network error'});
+      return $q.reject(data && data.error ? data.error : {'message': 'Network error'});
     }
   }
 
+}
+
+function AppService(CONFIG, Api, $q) {
+  var self = this;
+  this.session = null;
+  this.requested_url = DEFAULT_SCREEN;
+
   this.authenticate = function authenticate(args) {
-    return callApi('login', args).then(function (result) {
-      return self.session = result;
+    return Api.call('login', args).then(function (result) {
+      if (result)
+        return self.session = result;
+      else
+        return $q.reject({message: 'Login failed'});
     });
   }
 
@@ -136,7 +144,7 @@ function LoginCtrl(App, $location) {
       $location.path(App.requested_url).replace();
     }
     function fail(e) {
-      self.form_message = e ? e.message : 'Login failed';
+      self.form_message = e && e.message || 'Unknown error';
     }
   }
 }

@@ -307,6 +307,7 @@ _do_setup_links() {
 
   mkdir -p ~/.cache/pyenv/$name
   ln -sfnv ~/.cache/pyenv/$name .cache/python
+  ln -sfnv .cache/python/bin/carenetctl carenetctl
 
   mkdir -p ~/.local/run/$name
   ln -sfnv ~/.local/run/$name .cache/build
@@ -589,7 +590,7 @@ _install_static() {
 
 _finish_staging() {
   mkdir -pv $PUBLISH_INST/var
-  ln -sv ../bin/carenet-cgi $PUBLISH_INST/static/api.cgi
+  ln -sv ../bin/carenetctl $PUBLISH_INST/static/api.cgi
   ln -sv ../$version/static $PUBLISH_ROOT/staging/wwwroot/$version
 }
 
@@ -597,7 +598,7 @@ _finish_staging() {
 _activate_staging() {
   # TODO
   echo prepare staging DB
-  $PUBLISH_INST/bin/carenet-upgrade
+  $PUBLISH_INST/bin/carenetctl upgrade
   echo update index.html ...
 }
 
@@ -623,7 +624,7 @@ _activate_release() {
     kill -TERM $(cat $pidfile) || true
   fi
 
-  if $next/bin/carenet-upgrade
+  if $next/bin/carenetctl upgrade
   then
     previous=$(basename $(readlink -f $current))
     mv -Tfv $next $current

@@ -154,18 +154,6 @@ describe('LoginCtrl', function () {
     expect(ctrl.form_message).toEqual('');
   });
 
-  it('handles auth failure', function () {
-    spyOn(_.App, 'authenticate').and.callFake(function (args) {
-      return _.q(function (resolve, reject) {
-        reject();
-      });
-    });
-    var ctrl = _.controller('LoginCtrl');
-    ctrl.submit();
-    _.rootScope.$apply();
-    expect(ctrl.form_message).toEqual('Login failed');
-  });
-
   it('handles auth failure with message', function () {
     spyOn(_.App, 'authenticate').and.callFake(function (args) {
       return _.q(function (resolve, reject) {
@@ -177,34 +165,143 @@ describe('LoginCtrl', function () {
     _.rootScope.$apply();
     expect(ctrl.form_message).toEqual('A problem');
   });
+
+  it('handles auth error', function () {
+    spyOn(_.App, 'authenticate').and.callFake(function (args) {
+      return _.q(function (resolve, reject) {
+        reject();
+      });
+    });
+    var ctrl = _.controller('LoginCtrl');
+    ctrl.submit();
+    _.rootScope.$apply();
+    expect(ctrl.form_message).toEqual('Unknown error');
+  });
+
 });
 
 
+describe('ApiService', function () {
+  beforeEach(Inject('CONFIG', 'Api', '$httpBackend'));
+  afterEach(function () {
+    _.httpBackend.flush();
+    _.httpBackend.verifyNoOutstandingExpectation();
+    _.httpBackend.verifyNoOutstandingRequest();
+  });
+
+  it('handles true result', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond({result: true});
+    _.Api.call('foo')
+      .then(function (x) { expect(x).toBe(true) })
+      .catch(function (e) { fail('unexpected failure') });
+  });
+
+  it('handles false result', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond({result: false});
+    _.Api.call('foo')
+      .then(function (x) { expect(x).toBe(false) })
+      .catch(function (e) { fail('unexpected failure') });
+  });
+
+  it('handles result object', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond({result: {yes:'what'}});
+    _.Api.call('foo')
+      .then(function (x) { expect(x).toEqual({yes:'what'}) })
+      .catch(function (e) { fail('unexpected failure') });
+  });
+
+  it('handles undefined result as error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond({});
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('Network error') });
+  });
+
+  it('handles non-response as error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond();
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('Network error') });
+  });
+
+  it('handles 200 error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond(200, {error:{message:'foo'}});
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('foo') });
+  });
+
+  it('handles non-200 error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond(400, {error:{message:'foo'}});
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('foo') });
+  });
+
+  it('handles malformed error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond(400, 'whoopsie');
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('Network error') });
+  });
+
+  it('handles undefined error', function () {
+    var url = _.CONFIG.api + '/foo';
+    _.httpBackend.expectPOST(url).respond(400);
+    _.Api.call('foo')
+      .then(function () { fail('expected failure') })
+      .catch(function (e) { expect(e.message).toBe('Network error') });
+  });
+});
+
 describe('App.authenticate', function () {
 
-  beforeEach(Inject('CONFIG', 'App', '$httpBackend'));
+  beforeEach(Inject('App', 'Api', '$q', '$rootScope'));
 
   it('handles success', function () {
-    var url = _.CONFIG.api + '/login';
-    _.httpBackend.expectPOST(url).respond({result: true});
-    _.App.authenticate();
-    _.httpBackend.flush();
+    spyOn(_.Api, 'call').and.callFake(function (url, args) {
+      return _.q(function (resolve, reject) {
+        resolve(true);
+      });
+    });
+    _.App.authenticate()
+      .then(function (s) { expect(s).toBeTruthy() })
+      .catch(function (e) { fail('Unexpected failure') });
+    _.rootScope.$apply();
     expect(_.App.getSession()).toBe(true);
   });
 
   it('handles auth failure', function () {
-    var url = _.CONFIG.api + '/login';
-    _.httpBackend.expectPOST(url).respond({error: {message: 'Login failed'}});
-    _.App.authenticate();
-    _.httpBackend.flush();
+    spyOn(_.Api, 'call').and.callFake(function (url, args) {
+      return _.q(function (resolve, reject) {
+        resolve(false);
+      });
+    });
+    _.App.authenticate()
+      .then(function (s) { fail('Expected failure') })
+      .catch(function (e) { expect(e.message).toBe('Login failed') });
+    _.rootScope.$apply();
     expect(_.App.getSession()).toBeFalsy();
   });
 
-  it('handles API non-response', function () {
-    var url = _.CONFIG.api + '/login';
-    _.httpBackend.expectPOST(url).respond();
-    _.App.authenticate();
-    _.httpBackend.flush();
+  it('handles auth error', function () {
+    spyOn(_.Api, 'call').and.callFake(function (url, args) {
+      return _.q(function (resolve, reject) {
+        reject({message: 'poop'});
+      });
+    });
+    _.App.authenticate()
+      .then(function (s) { fail('Expected failure') })
+      .catch(function (e) { expect(e.message).toBe('poop') });
+    _.rootScope.$apply();
     expect(_.App.getSession()).toBeFalsy();
   });
 

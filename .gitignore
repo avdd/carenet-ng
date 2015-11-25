@@ -1,5 +1,6 @@
 /.cache
 /.vagrant
+/carenetctl
 /gulp
 /misc
 /node_modules

@@ -134,7 +134,7 @@ function getConfig() {
   if (process.env.VIRTUAL_ENV)
     cp.python_env = process.env.VIRTUAL_ENV;
 
-  config.python_cgi = path.join(cp.python_env, 'bin', 'carenet-cgi');
+  config.python_cgi = path.join(cp.python_env, 'bin', 'carenetctl');
 
   config.test_browser = 'chrome';
   if (process.env.TRAVIS)

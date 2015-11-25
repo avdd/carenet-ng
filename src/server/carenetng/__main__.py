@@ -2,32 +2,56 @@
 from __future__ import absolute_import
 __metaclass__ = type
 
+import os
 import click
+import logging
+
 from . import core
 from . import web
 
-import logging
 log = logging.getLogger(__name__)
 
 DEFAULT_RUN_HOST='0.0.0.0'
 DEFAULT_RUN_PORT = 8099
 
-
-def web_factory():
-    return core.context()
-
-def script_factory(info):
-    return core.context({})
-
-class ScriptInfo:
-    pass
+cli = click.Group()
+#pass_info = click.make_pass_decorator(ScriptInfo, ensure=True)
 
 
-handler = web.handler(core.registry)
-wsgi = web.wsgi_wrapper(handler, factory=web_factory)
-cli = click.Group() #script_factory)
-main = cli.main
-pass_info = click.make_pass_decorator(ScriptInfo, ensure=True)
+wsgi = config = None
+
+
+def init():
+    global wsgi, config
+    config = get_config()
+    #init_logging(config)
+    init_modules()
+    wsgi = web.wsgi_wrapper(handler = web.handler(core.registry),
+                            factory = lambda:core.context(config))
+
+
+def get_config():
+    env = os.environ.get('CARENET_ENV', 'UNDEFINED')
+    e = os.environ.get('REQUEST_ENV')
+    if e:
+        env += ':' + e
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from . import crowd
+    crowd_db = sessionmaker(create_engine('postgresql:///crowdtest'))
+    get_crowd_repository = lambda:crowd.Repository(crowd_db())
+    return dict(crowd_db=crowd_db,
+                get_crowd_repository=get_crowd_repository,
+                env=env)
+
+
+def main():
+    import os
+    gi = os.environ.get('GATEWAY_INTERFACE')
+    if gi and 'CGI' in gi:
+        return cgi()
+    else:
+        return cli.main()
 
 
 def cgi():
@@ -37,6 +61,17 @@ def cgi():
         return wsgi(environ, start_response)
     from wsgiref.handlers import CGIHandler
     return CGIHandler().run(handle)
+
+
+def init_modules():
+    from . import login
+
+
+def init_logging(config):
+    log.info('startup')
+    root = logging.getLogger()
+    root.handlers[:] = []
+    root.addHandler(logging.FileHandler('/tmp/out.log'))
 
 
 @cli.command('foo')
@@ -84,7 +119,7 @@ def run(cx):
               'is active if debug is enabled.')
 @click.option('--with-threads/--without-threads', default=False,
               help='Enable or disable multithreading.')
-@pass_info
+#@pass_info
 def run_command(info, host, port, reload, debugger, with_threads):
     if reload is None:
         reload = info.debug
@@ -101,7 +136,7 @@ def run_command(info, host, port, reload, debugger, with_threads):
 
 @cli.command('shell', short_help='Runs a shell with an app context')
 #@click.pass_context
-@pass_info
+#@pass_info
 def shell_command(info):
     app = info.load_app()
     banner = 'Python %s on %s\nApp: %s%s\nInstance: %s' % (
@@ -116,5 +151,8 @@ def shell_command(info):
     #cx.update(app.make_shell_context())
     import code
     code.interact(banner=banner, local=cx)
+
+
+init()
 
 
