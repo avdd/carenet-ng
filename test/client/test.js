@@ -177,11 +177,11 @@ describe('LoginCtrl', function () {
     _.rootScope.$apply();
     expect(ctrl.form_message).toEqual('Unknown error');
   });
-
 });
 
 
 describe('ApiService', function () {
+
   beforeEach(Inject('CONFIG', 'Api', '$httpBackend'));
   afterEach(function () {
     _.httpBackend.flush();
@@ -262,6 +262,7 @@ describe('ApiService', function () {
   });
 });
 
+
 describe('App.authenticate', function () {
 
   beforeEach(Inject('App', 'Api', '$q', '$rootScope'));
@@ -304,7 +305,6 @@ describe('App.authenticate', function () {
     _.rootScope.$apply();
     expect(_.App.getSession()).toBeFalsy();
   });
-
 });
 
 
