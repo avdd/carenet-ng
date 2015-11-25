@@ -1326,10 +1326,13 @@
       "version": "1.0.3"
     },
     "del": {
-      "version": "2.0.2",
+      "version": "2.1.0",
       "dependencies": {
-        "object-assign": {
-          "version": "4.0.1"
+        "pinkie": {
+          "version": "2.0.1"
+        },
+        "pinkie-promise": {
+          "version": "2.0.0"
         }
       }
     },
@@ -1620,9 +1623,6 @@
         },
         "minimatch": {
           "version": "3.0.0"
-        },
-        "object-assign": {
-          "version": "4.0.1"
         }
       }
     },
