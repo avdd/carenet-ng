@@ -2378,12 +2378,7 @@
       "version": "1.3.2"
     },
     "opn": {
-      "version": "3.0.2",
-      "dependencies": {
-        "object-assign": {
-          "version": "3.0.0"
-        }
-      }
+      "version": "3.0.3"
     },
     "optimist": {
       "version": "0.6.1",
@@ -2679,17 +2674,7 @@
       }
     },
     "run-sequence": {
-      "version": "1.1.4",
-      "dependencies": {
-        "gulp-util": {
-          "version": "3.0.7",
-          "dependencies": {
-            "object-assign": {
-              "version": "3.0.0"
-            }
-          }
-        }
-      }
+      "version": "1.1.5"
     },
     "saucelabs": {
       "version": "1.0.1"
