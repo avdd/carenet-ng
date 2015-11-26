@@ -62,16 +62,25 @@ def test_crowd_empty_password():
 
 def test_crowd_wrong_password():
     u = crowd.User()
-    u.credential = 'unused'
+    u.credential = crowd.newhash('password')
     u.active = 'T'
     repo = mock_repository(u)
     with pytest.raises(crowd.BadPassword):
         repo.authenticate(None, 'incorrect')
 
 
+def test_crowd_bad_data():
+    u = crowd.User()
+    u.credential = 'malformed'
+    u.active = 'T'
+    repo = mock_repository(u)
+    with pytest.raises(crowd.BadPassword):
+        repo.authenticate(None, 'whatever')
+
+
 def test_crowd_good_password():
     u = crowd.User()
-    u.credential = crowd.CRED_PREFIX + crowd.newhash('good password')
+    u.credential = crowd.newhash('good password')
     u.active = 'T'
     repo = mock_repository(u)
     result = repo.authenticate(None, 'good password')
@@ -80,8 +89,8 @@ def test_crowd_good_password():
 
 def test_crowd_unicode_password():
     u = crowd.User()
-    password = crowd.newhash(u'\N{SNOWMAN}password')
-    u.credential = crowd.CRED_PREFIX + crowd.newhash(password)
+    password = u'\N{SNOWMAN}password'
+    u.credential = crowd.newhash(password)
     u.active = 'T'
     repo = mock_repository(u)
     result = repo.authenticate(None, password)
@@ -114,7 +123,7 @@ def test_login_accepts_valid(cx):
     test_user = crowd.User()
     test_user.active
     u = crowd.User()
-    u.credential = crowd.CRED_PREFIX + crowd.newhash('good password')
+    u.credential = crowd.newhash('good password')
     u.active = 'T'
     cx.get_crowd_repository = lambda:mock_repository(u)
     r = login.login(cx, 'test-user', 'good password')

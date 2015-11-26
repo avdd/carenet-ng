@@ -2,9 +2,8 @@ from __future__ import absolute_import
 __metaclass__ = type
 
 import os
-import hashlib
-import datetime
 import pytz
+import datetime
 
 from sqlalchemy import (
     Column,
@@ -21,10 +20,13 @@ from sqlalchemy.orm.collections import column_mapped_collection
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 
+from passlib.context import CryptContext
 
-CRED_PREFIX = '{SSHA}'
-NONCELEN = 8
-MACLEN = 20
+passlib_schemes = ['ldap_salted_sha1', 'sha512_crypt', 'bcrypt']
+passlib_default = 'ldap_salted_sha1'
+passlib_context = CryptContext(schemes=passlib_schemes,
+                               default=passlib_default,
+                               ldap_salted_sha1__salt_size=8)
 
 
 Entity = declarative_base()
@@ -50,22 +52,7 @@ class Repository:
 
 
 def newhash(secret):
-    return _mkhash(secret, os.urandom(NONCELEN))
-
-
-def cmphash(clearpass, refhash):
-    nonce = refhash.decode('base64')[MACLEN:]
-    hashed = _mkhash(clearpass, nonce)
-    fmt = '%%-%ds' % len(refhash)
-    hashed = fmt % hashed
-    return len(hashed) == len(refhash) and hashed == refhash
-
-
-def _mkhash(secret, nonce):
-    if isinstance(secret, unicode):
-        secret = secret.encode('UTF-8')
-    sha1 = hashlib.sha1(secret + nonce).digest()
-    return (sha1 + nonce).encode('base64').strip()
+    return passlib_context.encrypt(secret)
 
 
 class SecurityException(Exception):
@@ -138,8 +125,10 @@ class User(Entity):
 
     def compare_credential(self, clearpass):
         if self.credential and clearpass:
-            hashpass = self.credential[len(CRED_PREFIX):]
-            return cmphash(clearpass, hashpass)
+            try:
+                return passlib_context.verify(clearpass, self.credential)
+            except ValueError:
+                pass
         return False
 
 
