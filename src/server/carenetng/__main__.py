@@ -32,13 +32,17 @@ def init():
 
 def get_config():
     env = os.environ.get('CARENET_ENV', 'UNDEFINED')
-    e = os.environ.get('REQUEST_ENV')
-    if e:
-        env += ':' + e
+    e = os.environ.get('SCRIPT_NAME')
+    if e and '/api.cgi' in e:
+        env += ':' + e.split('/')[-2]
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from . import crowd
-    crowd_db = sessionmaker(create_engine('postgresql:///crowdtest'))
+    if 'public' in env:
+        db = 'cf_crowd@:5433/cf_crowd_live'
+    else:
+        db = '/crowdtest'
+    crowd_db = sessionmaker(create_engine('postgresql://' + db))
     get_crowd_repository = lambda:crowd.Repository(crowd_db())
     return dict(crowd_db=crowd_db,
                 get_crowd_repository=get_crowd_repository,
