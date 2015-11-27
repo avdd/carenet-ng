@@ -307,7 +307,6 @@ function makeInitJsDevel(out) {
   var data = {
         devel: true
       , channel: 'devel'
-      , deps: ['ngRoute']
       , api: config.paths.api_cgi
       , version: config.versionTag
       , js: config.vendor_js
@@ -407,7 +406,7 @@ function initJsDist(channel, api_path) {
       , channel: channel
       , api: api_path
       , version: config.versionTag
-      , deps: ['ngRoute', 'templates']
+      , deps: ['templates']
       , js: prefixed(hash, js)
       , css: prefixed(hash + '/css', css)
       , assetCount: config.assetCount

@@ -330,11 +330,11 @@ var timelog = (function () {
 
   }
 
-  window.INIT = function INIT(args) {
-    window.CONFIG = args;
+  window.INIT = function INIT(config) {
+    window.CONFIG = config;
     document.getElementById('loading-box-inner').style.display = 'block';
 
-    if (args.devel)
+    if (config.devel)
       onReady();
     else
       useAppCache(onProgress, onReady, notifyUpdate);
@@ -343,7 +343,7 @@ var timelog = (function () {
       if (count === 0)
         return document.getElementById('loading-progress-outer')
                        .style.visibility = 'visible';
-      var total = args.assetCount + 1;
+      var total = config.assetCount + 1;
       if (count > total)
         count = total;
       var percent = Math.round(count / total * 100);
@@ -352,17 +352,19 @@ var timelog = (function () {
     }
 
     function onReady() {
-      loadAssets(args.css, args.js, done);
+      loadAssets(config.css, config.js, done);
     }
 
     function done() {
-      angular.bootstrap(document, [args.app], {strictDi: !args.devel});
+      var deps = ['init'].concat(config.deps || []);
+      angular.module('__main__', deps);
+      angular.bootstrap(document, ['__main__'], {strictDi: !config.devel});
     }
 
     function notifyUpdate() {
       timelog('NOTIFY UPDATE');
-      if (window.CONFIG.onappcacheupdate)
-        window.CONFIG.onappcacheupdate();
+      if (config.onappcacheupdate)
+        config.onappcacheupdate();
     }
 
   }
