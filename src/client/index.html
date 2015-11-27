@@ -275,8 +275,8 @@ var timelog = (function () {
     }
 
     function scheduleRecheck() {
-      var checkInterval = 5000;
-      // var checkInterval = 60000;
+      // var checkInterval = 5000;
+      var checkInterval = 60000;
       recheckTimeout = setInterval(checkManifest, checkInterval);
     }
 
