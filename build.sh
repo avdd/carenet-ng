@@ -365,7 +365,7 @@ _do_setup_server() {
 }
 
 
-_do_test_full() {
+_do_test() {
   ./gulp test
   _do_test_vagrant
 }
