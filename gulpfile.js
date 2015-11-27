@@ -70,14 +70,14 @@ task('serve-dist', ['html-dist'], serveDist);
 
 function htmlTask(channel, api) {
   return function () {
-    generateIndexHtml(channel, api);
+    return generateIndexHtml(channel, config.paths[api]);
   }
 }
 
-task('html-dist', ['manifest'], htmlTask('dist-local', 'cgi'));
-task('html-staging', ['manifest'], htmlTask('staging', 'cgi'));
-task('html-livesim', ['manifest'], htmlTask('livesim', 'daemon'));
-task('html-live', ['manifest'], htmlTask('live', 'daemon'));
+task('html-dist', ['manifest'], htmlTask('dist-local', 'api_cgi'));
+task('html-staging', ['manifest'], htmlTask('staging', 'api_cgi'));
+task('html-livesim', ['manifest'], htmlTask('livesim', 'api_daemon'));
+task('html-live', ['manifest'], htmlTask('live', 'api_daemon'));
 
 task('manifest', ['version-tag', 'asset-hash', 'online.txt'], distManifest);
 task('asset-hash', ['assets'], assetHash);
@@ -398,11 +398,10 @@ function distManifest() {
   }
 }
 
-function initJsDist(channel, api) {
+function initJsDist(channel, api_path) {
   var js = [config.files.vendorjs, config.files.appjs]
     , css = [config.files.vendorcss, config.files.appcss]
     , hash = config.assetHash
-    , api_path = config.paths['api_' + api]
     , data = {
         devel: false
       , channel: channel
@@ -422,11 +421,11 @@ function initJs(data) {
   return '\nINIT(' + JSON.stringify(data) + ');\n';
 }
 
-function generateIndexHtml(channel, api) {
+function generateIndexHtml(channel, api_path) {
   if (!config.assetHash)
     throw new Error('missing asset hash');
   var initjs = ' src=init.js>',
-      initjsReplace = '>' + initJsDist(channel, api),
+      initjsReplace = '>' + initJsDist(channel, api_path),
       iconpath = 'misc/power',
       iconpathReplace = config.assetHash + '/misc/power',
       html = '<html ',
