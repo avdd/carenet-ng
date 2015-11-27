@@ -528,25 +528,21 @@ function assetHash() {
 }
 
 function serveDevel() {
-  var api_token = 'devel';
-  return runServer(develServer(api_token, config.out.devel, true),
+  return runServer(develServer('devel', config.out.devel, true),
                    config.ports.browse);
 }
 
 function serveUiTest() {
-  var api_token = 'devel-uitest';
-  return runServer(develServer(api_token, config.out.test),
+  return runServer(develServer('devel-ui-UNUSED', config.out.test),
                    config.ports.test);
 }
 
 function serveDist() {
-  var api_token = 'dist-local';
-  return runServer(distServer(api_token), config.ports.browse);
+  return runServer(distServer('dist-local'), config.ports.browse);
 }
 
 function serveSpec() {
-  var api_token = 'spec-local';
-  return runServer(distServer(api_token), config.ports.test);
+  return runServer(distServer('spec-local'), config.ports.test);
 }
 
 function closeServer() {
