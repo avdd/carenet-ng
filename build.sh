@@ -527,8 +527,7 @@ _vagrant() {
 
 _vagrant_up() {
   [[ "${VAGRANT_UP:-}" ]] && return 0
-  _vagrant up
-  _vagrant provision
+  _vagrant up --provision
   _vagrant ssh-config > $VAGRANT_SSH_CONFIG
   VAGRANT_UP=1
 }
