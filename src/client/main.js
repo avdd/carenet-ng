@@ -24,7 +24,6 @@ function ViewCtrl() {
 function LoginCtrl(App, $location) {
   var self = this;
   this.form_break = 'sm';
-  this.logged_in = false;
   this.form_message = null;
   this.form_data = {};
   this.submittable = false
