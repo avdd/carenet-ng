@@ -211,12 +211,16 @@ describe('init', function () {
 
   describe('RouteConfig', function () {
 
-    beforeEach(Inject('$location', '$rootScope', '$httpBackend', '$route'));
+    beforeEach(Inject('App', '$location', '$rootScope', '$httpBackend', '$route'));
 
     afterEach(function () {
       _.httpBackend.verifyNoOutstandingExpectation();
       _.httpBackend.verifyNoOutstandingRequest();
     })
+
+    afterEach(function () {
+      // _.App.deinitCommand();
+    });
 
     it('redirects to login', function () {
       _.httpBackend.expectGET('templates/main.html').respond(200);
@@ -224,115 +228,212 @@ describe('init', function () {
       _.location.path('/view/main');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/form/login');
-      expect(_.route.current.controller).toBe('LoginCtrl')
     });
 
-    it('login redirects if logged in', function () {
+    /*
+    xit('login redirects if logged in', function () {
       Inject('App');
       _.App.session = true;
+      _.App.initCommand('login');
       _.httpBackend.expectGET('templates/login_form.html').respond(200);
       _.httpBackend.expectGET('templates/main.html').respond(200);
       _.location.path('/form/login');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/view/main');
-      expect(_.route.current.controller).toBe('ViewCtrl')
     });
+    */
 
     it('doesn\'t redirect if logged in', function () {
-      Inject('App');
       _.App.session = true;
       _.httpBackend.expectGET('templates/main.html').respond(200);
       _.location.path('/view/main');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/view/main');
-      expect(_.route.current.controller).toBe('ViewCtrl')
+    });
+
+    it('redirects with uninitialised command', function () {
+      _.App.session = true;
+      _.httpBackend.expectGET('templates/hello_form.html').respond(200);
+      _.httpBackend.expectGET('templates/main.html').respond(200);
+      _.App.registerCommand('hello', function () {});
+      _.location.path('/form/hello');
+      _.httpBackend.flush();
+      expect(_.location.url()).toEqual('/view/main');
+    });
+
+    it('shows error on error', function () {
+      _.httpBackend.expectGET('templates/main.html').respond(200);
+      _.httpBackend.expectGET('templates/login_form.html').respond(200);
+      _.httpBackend.flush();
+      Inject('$route');
     });
   });
 
 
-  describe('LoginCtrl', function () {
-
-    beforeEach(Inject('$controller', '$rootScope', '$q', 'App'));
-
-    it('is submittable only with form filled', function () {
-      var ctrl = _.controller('LoginCtrl');
-      expect(ctrl.submittable).toBe(false);
-      ctrl.form_data = {username: '', password: ''};
-      ctrl.changed();
-      expect(ctrl.submittable).toBe(false);
-      ctrl.form_data = {username: 'foo', password: 'bar'};
-      ctrl.changed();
-      expect(ctrl.submittable).toBe(true);
+  describe('App.cqrs', function () {
+    beforeEach(Inject('App'));
+    it('fails registering query with same name', function () {
+      function fails() {
+        _.App.registerQuery('hello', function () {});
+        _.App.registerQuery('hello', function () {});
+      }
+      expect(fails).toThrow();
     });
-
-    it('handles auth success', function () {
-      spyOn(_.App, 'authenticate').and.callFake(function (args) {
-        return _.q(function (resolve, reject) {
-          resolve({result:true});
-        });
-      });
-      var ctrl = _.controller('LoginCtrl');
-      ctrl.submit();
-      expect(_.App.authenticate).toHaveBeenCalled();
-      _.rootScope.$apply();
-      expect(ctrl.form_message).toEqual('');
-    });
-
-    it('handles auth failure with message', function () {
-      spyOn(_.App, 'authenticate').and.callFake(function (args) {
-        return _.q(function (resolve, reject) {
-          reject({message: 'A problem'});
-        });
-      });
-      var ctrl = _.controller('LoginCtrl');
-      ctrl.submit();
-      _.rootScope.$apply();
-      expect(ctrl.form_message).toEqual('A problem');
-    });
-
-    it('handles auth error', function () {
-      spyOn(_.App, 'authenticate').and.callFake(function (args) {
-        return _.q(function (resolve, reject) {
-          reject();
-        });
-      });
-      var ctrl = _.controller('LoginCtrl');
-      ctrl.submit();
-      _.rootScope.$apply();
-      expect(ctrl.form_message).toEqual('Unknown error');
+    it('fails registering command with same name', function () {
+      function fails() {
+        _.App.registerCommand('hello', function () {});
+        _.App.registerCommand('hello', function () {});
+      }
+      expect(fails).toThrow();
     });
   });
 
 
   describe('ViewCtrl', function () {
 
-    beforeEach(Inject('$controller'))
+    beforeEach(Inject('App', '$controller', '$routeParams'))
 
     it('says hello', function () {
+      _.App.registerQuery('hello', function () {
+        this.message = 'Hello!';
+      });
+      _.routeParams.name = 'hello';
       var ctrl = _.controller('ViewCtrl');
-      expect(ctrl.message).toEqual('Hello');
+      expect(ctrl.query.message).toEqual('Hello!');
     });
   });
-});
 
 
-//-- new stuff
+  describe('FormCtrl', function () {
 
-describe('TestExperiment', function () {
+    beforeEach(Inject('App', '$controller', '$routeParams', '$rootScope', '$q'));
 
-  angular.module('fixture', [])
-    .controller('FooCtrl', function FooCtrl() {
-      this.foo = 'ctrl.foo';
+    it('basic command', function () {
+      _.App.registerCommand('hello', function () {});
+      _.App.initCommand('hello');
+      _.routeParams.name = 'hello';
+      var ctrl = _.controller('FormCtrl');
+      expect(ctrl.form.submittable).toBe(false);
+      ctrl.changed();
+      expect(ctrl.form.submittable).toBe(true);
     });
 
-  beforeEach(module('fixture'));
-  beforeEach(Inject('$controller'))
+    it('is submittable when valid', function () {
+      var called = false;
+      function command() {
+        this.isValid = function (x) {
+          called = true;
+          return x.value == 1;
+        }
+      }
+      _.App.registerCommand('hello', command);
+      _.App.initCommand('hello');
+      _.routeParams.name = 'hello';
+      var ctrl = _.controller('FormCtrl');
+      expect(ctrl.form.submittable).toBe(false);
+      ctrl.changed();
+      expect(called).toBe(true);
+      expect(ctrl.form.submittable).toBe(false);
+      ctrl.form.data = {value: 1};
+      ctrl.changed();
+      expect(ctrl.form.submittable).toBe(true);
+    });
 
-  it('says hello', function () {
-    var ctrl = _.controller('FooCtrl');
-    expect(ctrl.foo).toEqual('ctrl.foo');
+    it('calls command on submit', function () {
+      var called = false;
+      function command() {
+        this.next = function () {
+          called = true;
+        }
+      }
+      _.App.registerCommand('hello', command);
+      _.App.initCommand('hello');
+      _.routeParams.name = 'hello';
+      var ctrl = _.controller('FormCtrl');
+      ctrl.submit();
+      _.rootScope.$apply();
+      expect(called).toBe(true);
+    });
+
+    it('has message on failure', function () {
+      function command() {
+        this.next = function (App, x) {
+          return _.q.reject({message: 'the failz'});
+        }
+      }
+      _.App.registerCommand('hello', command);
+      _.App.initCommand('hello');
+      _.routeParams.name = 'hello';
+      var ctrl = _.controller('FormCtrl');
+      expect(ctrl.form.message).toBeNull();
+      ctrl.submit();
+      _.rootScope.$apply();
+      expect(ctrl.form.message).toEqual('the failz');
+    });
+
+    it('has unknown message on empty error', function () {
+      function command() {
+        this.next = function (App, x) {
+          return _.q.reject();
+        }
+      }
+      _.App.registerCommand('hello', command);
+      _.App.initCommand('hello');
+      _.routeParams.name = 'hello';
+      var ctrl = _.controller('FormCtrl');
+      expect(ctrl.form.message).toBeNull();
+      ctrl.submit();
+      _.rootScope.$apply();
+      expect(ctrl.form.message).toEqual('Unknown error');
+    });
   });
-});
 
+  describe('Login command', function () {
+
+    beforeEach(Inject('App', '$q', '$rootScope'));
+
+    it('is invalid with no user or password', function () {
+      var cmd = _.App.initCommand('login');
+      expect(cmd.isValid({})).toBe(false);
+    });
+
+    it('is valid with any user and password', function () {
+      var cmd = _.App.initCommand('login');
+      expect(cmd.isValid({username: 'x', password: 'y'})).toBe(true);
+    });
+
+    it('handles auth failure with message', function () {
+      spyOn(_.App, 'authenticate').and.callFake(function () {
+        return _.q.reject({message: 'A problem!'});
+      });
+      _.App.initCommand('login')
+        .next({})
+        .then(function () { fail('expected failure') })
+        .catch(function (e) { expect(e.message).toEqual('A problem!') })
+      _.rootScope.$apply();
+    });
+
+    it('handles auth success', function () {
+      spyOn(_.App, 'authenticate').and.callFake(function () {
+        return _.q.resolve({result: true});
+      });
+      _.App.requested_url = 'go/here';
+      _.App.initCommand('login')
+        .next()
+        .then(function (r) { expect(r).toBe('go/here') })
+        .catch(function (e) { fail('unexpected failure') })
+      _.rootScope.$apply();
+    });
+  });
+
+  describe('Main query', function () {
+    it('says hello', function () {
+      Inject('App');
+      var q = _.App.getQuery('main');
+      expect(q.message).toBe('Hello');
+    });
+  });
+
+});
 
 

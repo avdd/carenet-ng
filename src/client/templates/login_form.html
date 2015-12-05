@@ -27,15 +27,15 @@
 
               <div class=row>
 
-                <label class="control-label col-{{self.form_break}}-3">
+                <label class="control-label col-{{self.form.break_code}}-3">
                   <span>username</span>
                 </label>
 
-                <div class="col-{{self.form_break}}-9">
+                <div class="col-{{self.form.break_code}}-9">
                   <input class="form-control"
                          tabindex=1
                          autofocus
-                         ng-model="self.form_data.username"
+                         ng-model="self.form.data.username"
                          ng-change="self.changed()"
                          ng-minlength="2" >
 
@@ -56,15 +56,15 @@
 
               <div class=row>
 
-                <label class="control-label col-{{self.form_break}}-3">
+                <label class="control-label col-{{self.form.break_code}}-3">
                   <span>password</span>
                 </label>
 
-                <div class="col-{{self.form_break}}-9">
+                <div class="col-{{self.form.break_code}}-9">
                   <input class="form-control"
                          type=password
                          tabindex=2
-                         ng-model="self.form_data.password"
+                         ng-model="self.form.data.password"
                          ng-change="self.changed()"
                          ng-minlength="2" >
 
@@ -80,14 +80,14 @@
 
             <div class="col-xs-10 col-xs-offset-1">
               <div class=row>
-                <div class="col-{{self.form_break}}-12
-                            col-{{self.form_break}}-offset-3">
+                <div class="col-{{self.form.break_code}}-12
+                            col-{{self.form.break_code}}-offset-3">
                   <div class=row>
                     <div class="col-xs-4 col-sm-3">
 
                       <button class="btn btn-xblock btn-primary"
                               tabindex=1000
-                              ng-disabled="!self.submittable"
+                              ng-disabled="!self.form.submittable"
                               >
                           Log in
                         </button>
@@ -95,8 +95,8 @@
 
                     <div class="col-xs-8 col-sm-7">
                         <p class="validation-message"
-                            ng-bind="self.form_message"
-                            ng-show="self.form_message">
+                            ng-bind="self.form.message"
+                            ng-show="self.form.message">
                     </div>
                   </div> <!-- /row -->
                 </div>

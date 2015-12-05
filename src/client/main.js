@@ -3,109 +3,136 @@
 'use strict';
 
 
-var DEFAULT_SCREEN = '/view/main';
-var LOGIN_SCREEN = '/form/login';
 var CONFIG = window.CONFIG || {};
 
 
 angular.module('init', ['ngRoute', 'core', 'util'])
-  .controller('LoginCtrl', LoginCtrl)
+  .controller('FormCtrl', FormCtrl)
   .controller('ViewCtrl', ViewCtrl)
   .config(routeConfig)
   .run(routeInit)
   ;
 
 
-function ViewCtrl() {
-  this.message = 'Hello';
-}
-
-
-function LoginCtrl(App, $location) {
-  var self = this;
-  this.form_break = 'sm';
-  this.form_message = null;
-  this.form_data = {};
-  this.submittable = false
-  this.changed = function changed() {
-    var f = self.form_data;
-    if (f.username && f.password)
-      self.submittable = true;
-  }
-  this.submit = function () {
-    self.form_message = '';
-    App.authenticate(self.form_data).then(ok).catch(fail);
-    function ok(session) {
-      var url = App.requested_url || DEFAULT_SCREEN;
-      $location.path(url).replace();
-    }
-    function fail(e) {
-      self.form_message = e && e.message || 'Unknown error';
-    }
-  }
-}
-
-
-function routeInit($rootScope, $location) {
-  $rootScope.version = CONFIG.channel + '-' + CONFIG.version;
-
-  $rootScope.$on('$routeChangeError', function (ev, next, current, rej) {
-    // istanbul ignore next ('else' not covered)
-    if (rej.redirectTo)
-      $location.path(rej.redirectTo).replace();
-    else
-      throw rej;
-  });
-}
 
 
 function routeConfig($routeProvider) {
-  $routeProvider.when(DEFAULT_SCREEN, {
-    templateUrl: 'templates/main.html',
-    controller: 'ViewCtrl',
-    controllerAs: 'self',
-    resolve: {
-      '': hasSession
-    }
-  });
-
-  $routeProvider.when(LOGIN_SCREEN, {
-    templateUrl: 'templates/login_form.html',
-    controller: 'LoginCtrl',
-    controllerAs: 'self',
-    resolve: {
-      '': hasNoSession
-    }
-  });
-
-  $routeProvider
-    .when('',  {redirectTo: DEFAULT_SCREEN})
-    .when('/', {redirectTo: DEFAULT_SCREEN})
-    .otherwise({templateUrl: 'templates/error.html'});
-
-  function hasSession(App, $q, $location) {
-    if (!App.getSession($location.url()))
-      return $q.reject({redirectTo: LOGIN_SCREEN});
-  }
-
-  function hasNoSession(App, $q, $location) {
-    if (App.getSession())
-      return $q.reject({redirectTo: DEFAULT_SCREEN});
-  }
-
-  /*
   $routeProvider.when('/view/:name', {
     templateUrl: getViewTemplate,
     controller: 'ViewCtrl',
-    controllerAs: 'self'
+    controllerAs: 'self',
+    resolve: {
+      '': allowView
+    }
   });
+
+  $routeProvider.when('/form/:name', {
+    templateUrl: getFormTemplate,
+    controller: 'FormCtrl',
+    controllerAs: 'self',
+    resolve: {
+      '': allowForm
+    }
+  });
+
+  var DEFAULT_SCREEN = '/view/main';
+  $routeProvider
+    .when('',  {redirectTo: DEFAULT_SCREEN})
+    .when('/', {redirectTo: DEFAULT_SCREEN})
+    .when('/error', {templateUrl: 'templates/error.html'})
+    .otherwise({redirectTo: '/error'});
+
+  function allowView(App, $q, $location) {
+    if (!App.getSession($location.url()))
+      return $q.reject({command: 'login'});
+  }
+
+  function allowForm(App, $q, $route) {
+    var params = $route.current.params
+    var cmd = App.getCurrent();
+    if (!cmd || params.name != cmd.command_name)
+      return $q.reject({view: 'main'});
+  }
+
+  function getFormTemplate(params) {
+    return 'templates/' + params.name + '_form.html';
+  }
 
   function getViewTemplate(params) {
     return 'templates/' + params.name + '.html';
   }
-  */
 
 }
+
+
+function routeInit(App, $rootScope, $location) {
+  $rootScope.version = CONFIG.channel + '-' + CONFIG.version;
+
+  $rootScope.$on('$routeChangeError', function (ev, next, current, rej) {
+    var view;
+    if (rej.command)
+      view = App.initCommand(rej.command).start;
+    else if (rej.view)
+      view = 'view/' + rej.view
+    else // istanbul ignore next
+      view = 'error';
+    $location.path(view).replace();
+  });
+
+  App.registerQuery('main', function () {
+    this.message = 'Hello';
+  })
+
+  App.registerCommand('login', function () {
+    this.start = 'form/login';
+    this.isValid = function (data) {
+      return !!(data.username && data.password)
+    }
+    this.next = function (data) {
+      return App.authenticate(data).then(function ok() {
+        return App.requested_url;
+      });
+    }
+  })
+}
+
+
+function ViewCtrl(App, $routeParams, $location) {
+  this.query = App.getQuery($routeParams.name);
+}
+
+
+function FormCtrl(App, $routeParams, $location, $q) {
+  var self = this;
+  this.command = App.getCurrent();
+  this.form = {
+    break_code: 'sm',
+    message: null,
+    data: {},
+    submittable: false
+  }
+
+  this.go = function(path) {
+    $location.path(path).replace();
+  }
+
+  this.changed = function changed() {
+    if (self.command.isValid(self.form.data))
+      self.form.submittable = true;
+  }
+
+  this.submit = function () {
+    self.form.message = '';
+    $q.when(this.command.next(this)).then(ok).catch(fail);
+    function ok(state) {
+      self.go(state)
+    }
+    function fail(e) {
+      self.form.message = e && e.message || 'Unknown error';
+    }
+  }
+}
+
 
 
 angular.module('core', [])
@@ -114,10 +141,56 @@ angular.module('core', [])
   ;
 
 
+
+
 function AppService(Api, $q) {
   var self = this;
   this.session = null;
   this.requested_url = null;
+
+  var _queries = {};
+  var _commands = {};
+  var _current = null;
+
+  this.registerQuery = function registerQuery(name, f) {
+    if (_queries[name])
+      throw new Error('query `' + name + '` already defined');
+    _queries[name] = f;
+  }
+
+  var commandProto = {
+    isValid: function isValid(data) {
+      return true;
+    },
+    // next: function next() {}
+  }
+
+  this.registerCommand = function registerCommand(name, f) {
+    if (_commands[name])
+      throw new Error('command `' + name + '` already defined');
+    f.prototype = commandProto;
+    _commands[name] = f;
+  }
+
+  this.getQuery = function getQuery(name) {
+    return new _queries[name];
+  }
+
+  this.initCommand = function initCommand(name) {
+    _current = new _commands[name];
+    _current.command_name = name;
+    return _current;
+  }
+
+  this.getCurrent = function getCurrent() {
+    return _current;
+  }
+
+  /*
+  this.deinitCommand = function deinitCommand() {
+    _current = null;
+  }
+  */
 
   this.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
