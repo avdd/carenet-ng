@@ -70,11 +70,12 @@ function routeInit(App, $rootScope, $location) {
 
   $rootScope.$on('$routeChangeError', function (ev, next, current, rej) {
     var view;
+    // istanbul ignore next (else not covered)
     if (rej.command)
       view = App.initCommand(rej.command).start;
     else if (rej.view)
       view = 'view/' + rej.view
-    else // istanbul ignore next
+    else
       view = 'error';
     $location.path(view).replace();
   });
@@ -162,7 +163,6 @@ function AppService(Api, $q) {
     isValid: function isValid(data) {
       return true;
     },
-    // next: function next() {}
   }
 
   this.registerCommand = function registerCommand(name, f) {
