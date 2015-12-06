@@ -165,9 +165,7 @@ describe('core', function () {
 
     it('handles success', function () {
       spyOn(_.Api, 'call').and.callFake(function (url, args) {
-        return _.q(function (resolve, reject) {
-          resolve(true);
-        });
+        return _.q.resolve(true);
       });
       _.App.authenticate()
         .then(function (s) { expect(s).toBeTruthy() })
@@ -178,9 +176,7 @@ describe('core', function () {
 
     it('handles auth failure', function () {
       spyOn(_.Api, 'call').and.callFake(function (url, args) {
-        return _.q(function (resolve, reject) {
-          resolve(false);
-        });
+        return _.q.resolve(false);
       });
       _.App.authenticate()
         .then(function (s) { fail('Expected failure') })
@@ -191,9 +187,7 @@ describe('core', function () {
 
     it('handles auth error', function () {
       spyOn(_.Api, 'call').and.callFake(function (url, args) {
-        return _.q(function (resolve, reject) {
-          reject({message: 'poop'});
-        });
+        return _.q.reject({message: 'poop'});
       });
       _.App.authenticate()
         .then(function (s) { fail('Expected failure') })
@@ -308,11 +302,16 @@ describe('init', function () {
 
     beforeEach(Inject('App', '$controller', '$routeParams', '$rootScope', '$q'));
 
+    function getForm(name, f) {
+      _.App.registerCommand(name, f);
+      _.App.initCommand(name);
+      _.routeParams.name = name;
+      return _.controller('FormCtrl');
+    }
+
     it('basic command', function () {
-      _.App.registerCommand('hello', function () {});
-      _.App.initCommand('hello');
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('FormCtrl');
+      function dummy() {}
+      var ctrl = getForm('hello', dummy);
       expect(ctrl.form.submittable).toBe(false);
       ctrl.changed();
       expect(ctrl.form.submittable).toBe(true);
@@ -326,10 +325,7 @@ describe('init', function () {
           return x.value == 1;
         }
       }
-      _.App.registerCommand('hello', command);
-      _.App.initCommand('hello');
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('FormCtrl');
+      var ctrl = getForm('hello', command);
       expect(ctrl.form.submittable).toBe(false);
       ctrl.changed();
       expect(called).toBe(true);
@@ -346,11 +342,7 @@ describe('init', function () {
           called = true;
         }
       }
-      _.App.registerCommand('hello', command);
-      _.App.initCommand('hello');
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('FormCtrl');
-      ctrl.submit();
+      getForm('hello', command).submit();
       _.rootScope.$apply();
       expect(called).toBe(true);
     });
@@ -361,10 +353,7 @@ describe('init', function () {
           return _.q.reject({message: 'the failz'});
         }
       }
-      _.App.registerCommand('hello', command);
-      _.App.initCommand('hello');
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('FormCtrl');
+      var ctrl = getForm('hello', command);
       expect(ctrl.form.message).toBeNull();
       ctrl.submit();
       _.rootScope.$apply();
@@ -377,10 +366,7 @@ describe('init', function () {
           return _.q.reject();
         }
       }
-      _.App.registerCommand('hello', command);
-      _.App.initCommand('hello');
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('FormCtrl');
+      var ctrl = getForm('hello', command);
       expect(ctrl.form.message).toBeNull();
       ctrl.submit();
       _.rootScope.$apply();
