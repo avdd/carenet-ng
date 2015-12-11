@@ -39,9 +39,9 @@ describe('login', function () {
   it('form appears', function () {
     get('form/login')
     expectUrl('form/login');
-    expect(element(by.model('self.form_data.username'))
+    expect(element(by.model('self.form.data.username'))
            .isPresent()).toBe(true);
-    expect(element(by.model('self.form_data.password'))
+    expect(element(by.model('self.form.data.password'))
            .isPresent()).toBe(true);
     expect(element(by.tagName('button')).getText())
       .toEqual('Log in');
@@ -50,18 +50,18 @@ describe('login', function () {
   it('rejects invalid credentials', function () {
     get('form/login')
     var invalid = 'definitely-not-valid';
-    element(by.model('self.form_data.username')).sendKeys(invalid);
-    element(by.model('self.form_data.password')).sendKeys(invalid);
+    element(by.model('self.form.data.username')).sendKeys(invalid);
+    element(by.model('self.form.data.password')).sendKeys(invalid);
     element(by.tagName('form')).submit();
     expectUrl('form/login');
-    expect(element(by.exactBinding('self.form_message')).getText())
+    expect(element(by.exactBinding('self.form.message')).getText())
       .toMatch(/failed/i);
   });
 
   it('accepts valid credentials', function () {
     get('view/main');
-    element(by.model('self.form_data.username')).sendKeys('devel-only');
-    element(by.model('self.form_data.password')).sendKeys('password');
+    element(by.model('self.form.data.username')).sendKeys('devel-only');
+    element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
     expectUrl('view/main');
     expect(element(by.tagName('h1')).getText())
