@@ -347,6 +347,20 @@ describe('init', function () {
       expect(called).toBe(true);
     });
 
+    it('calls command with form data', function () {
+      var called = {};
+      function command() {
+        this.next = function (data) {
+          called.data = data;
+        }
+      }
+      var ctrl = getForm('hello', command)
+      ctrl.form.data = {foo:'foo'};
+      ctrl.submit();
+      _.rootScope.$apply();
+      expect(called.data).toEqual({foo:'foo'});
+    });
+
     it('has message on failure', function () {
       function command() {
         this.next = function (App, x) {

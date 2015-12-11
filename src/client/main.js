@@ -124,7 +124,7 @@ function FormCtrl(App, $routeParams, $location, $q) {
 
   this.submit = function () {
     self.form.message = '';
-    $q.when(this.command.next(this)).then(ok).catch(fail);
+    $q.when(this.command.next(this.form.data)).then(ok).catch(fail);
     function ok(state) {
       self.go(state)
     }
