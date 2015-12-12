@@ -1486,7 +1486,7 @@
       "version": "1.0.3"
     },
     "del": {
-      "version": "2.1.0",
+      "version": "2.2.0",
       "dependencies": {
         "pinkie": {
           "version": "2.0.1"
@@ -1791,13 +1791,19 @@
       "resolved": "https://github.com/component/global/archive/v2.0.1.tar.gz"
     },
     "globby": {
-      "version": "3.0.1",
+      "version": "4.0.0",
       "dependencies": {
         "glob": {
-          "version": "5.0.15"
+          "version": "6.0.1"
         },
         "minimatch": {
           "version": "3.0.0"
+        },
+        "pinkie": {
+          "version": "2.0.1"
+        },
+        "pinkie-promise": {
+          "version": "2.0.0"
         }
       }
     },
