@@ -405,22 +405,23 @@ __do_update_bower__wip__() {
 }
 
 
-__do__update_npm_dep__wip__() {
+_do_update_npm_package() {
+  package=${1:-}
+  test "$package" || { echo "require package arg"; exit 1; }
   # pasted+adapted from shell history
   (cd $(readlink -f .cache) \
     && npm install --save $package@latest \
     && node src/clean-shrinkwrap.js)
 
-  # check above completed without error, then test
-  $GULP_JS test
-
-  for f in npm-shrinkwrap.json package.json  
+  for f in npm-shrinkwrap.json package.json
   do
     diff -u $f .cache/$f || {
-      mv -fv $f . && ln -sv src/$f .cache/$f
-    } 
+      mv -fv .cache/$f $f && ln -sfv src/$f .cache/$f 
+    }
   done
 
+  # check above completed without error, then test
+  #$GULP_JS test
 }
 
 
