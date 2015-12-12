@@ -7,7 +7,7 @@ import datetime
 
 from sqlalchemy import (
     Column,
-    CHAR,
+    Boolean,
     Integer,
     String,
     DateTime,
@@ -16,18 +16,13 @@ from sqlalchemy import (
 )
 
 from sqlalchemy.orm import sessionmaker, relationship, joinedload
-from sqlalchemy.orm.collections import column_mapped_collection
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 
 from passlib.context import CryptContext
 
-passlib_schemes = ['ldap_salted_sha1', 'sha512_crypt', 'bcrypt']
-passlib_default = 'ldap_salted_sha1'
-passlib_context = CryptContext(schemes=passlib_schemes,
-                               default=passlib_default,
-                               ldap_salted_sha1__salt_size=8)
-
+PASSLIB_SCHEMES = ['bcrypt']
+PASSLIB_DEFAULT = 'bcrypt'
 
 Entity = declarative_base()
 
@@ -35,24 +30,37 @@ Entity = declarative_base()
 class Repository:
     def __init__(self, db):
         self.db = db
+        self.passlib_context = CryptContext(schemes=PASSLIB_SCHEMES,
+                                            default=PASSLIB_DEFAULT,
+                                            deprecated=['auto'])
+
 
     def get_user(self, username):
         return (self.db.query(User)
-                .options(joinedload(User._attrs))
                 .options(joinedload(User._memberships))
-                .filter_by(lower_user_name = username.lower())
+                .filter_by(username = username.lower())
                 .first())
 
-    def authenticate(self, username, password):
+    def authenticate(self, username, clearpass):
         u = self.get_user(username)
         if not u:
             raise NoUser
-        if u.authenticate(password):
-            return u
+        if not u.enabled:
+            raise BadUser
+        if not u.passhash:
+            raise BadUser
+        if not clearpass:
+            raise BadPassword
+        if not self.verify_hash(clearpass, u.passhash):
+            raise BadPassword
+        return u
 
-
-def newhash(secret):
-    return passlib_context.encrypt(secret)
+    def verify_hash(self, clearpass, passhash):
+        try:
+            return self.passlib_context.verify(clearpass, passhash)
+        except ValueError:
+            pass
+        return False
 
 
 class SecurityException(Exception):
@@ -62,73 +70,34 @@ class SecurityException(Exception):
             msg += ': ' + str(self.args[0])
         return msg
 
+
 class LoginFailed(SecurityException): pass
 class NoUser(LoginFailed): pass
 class BadUser(LoginFailed): pass
 class BadPassword(LoginFailed): pass
 
 
-class Attr(Entity):
-    __tablename__ = 'cwd_user_attribute'
-    user_id = Column(Integer,
-                     ForeignKey('cwd_user.id'),
-                     primary_key=True)
-    attribute_name = Column(String, primary_key=True)
-    attribute_value = Column(String)
-
-
 class Membership(Entity):
-    __tablename__ = 'cwd_membership'
-    lower_parent_name = Column(String, primary_key=True)
-    lower_child_name = Column(String,
-                              ForeignKey('cwd_user.lower_user_name'),
-                              primary_key=True)
+    __tablename__ = 'sync_user_group_assoc'
+    groupname = Column(String, primary_key=True)
+    username = Column(String,
+                      ForeignKey('sync_user.username'),
+                      primary_key=True)
 
 
 class User(Entity):
 
-    __tablename__ = 'cwd_user'
+    __tablename__ = 'sync_user'
 
-    id = Column(Integer, primary_key=True)
-    lower_user_name = Column(String)
-    active = Column(CHAR(1))
+    username = Column(String, primary_key=True)
+    passhash = Column(String)
+    enabled = Column(Boolean)
     first_name = Column(String)
     last_name = Column(String)
     email_address = Column(String)
-    credential = Column(String)
-
-    username = property(lambda x:x.lower_user_name)
-
-    _attr_class = column_mapped_collection(Attr.attribute_name)
-    _attrs = relationship(Attr, collection_class=_attr_class)
-    attributes = association_proxy('_attrs', 'attribute_value')
-    del _attr_class
+    password_stamp = Column(DateTime(timezone=True))
 
     _memberships = relationship(Membership, collection_class=set)
-    groups = association_proxy('_memberships', 'lower_parent_name')
-
-    @property
-    def password_stamp(self):
-        stamp = self.attributes.get('passwordLastChanged')
-        if stamp:
-            ts = int(stamp)/1000.0
-            return datetime.datetime.fromtimestamp(ts, pytz.UTC)
-
-    def authenticate(self, clearpass):
-        if not self.credential:
-            raise BadUser
-        if self.active != 'T':
-            raise BadUser
-        if not self.compare_credential(clearpass):
-            raise BadPassword
-        return True
-
-    def compare_credential(self, clearpass):
-        if self.credential and clearpass:
-            try:
-                return passlib_context.verify(clearpass, self.credential)
-            except ValueError:
-                pass
-        return False
+    groups = association_proxy('_memberships', 'groupname')
 
 
