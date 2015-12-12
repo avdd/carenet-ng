@@ -3,7 +3,7 @@
   "description": "CareNET, the NEXT GENERATION",
   "private": true,
   "dependencies": {
-    "bower": "1.6.5",
+    "bower": "1.7.1",
     "cgi": "0.3.1",
     "connect": "3.4.0",
     "connect-livereload": "0.5.4",
