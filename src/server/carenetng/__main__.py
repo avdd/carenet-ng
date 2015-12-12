@@ -37,15 +37,14 @@ def get_config():
         env += ':' + e.split('/')[-2]
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from . import crowd
+    from . import auth
     if 'public' in env:
-        db = 'cf_crowd@:5433/cf_crowd_live'
+        db = 'cf_carenet@:5433/cf_carenet_live'
     else:
-        db = '/crowdtest'
-    crowd_db = sessionmaker(create_engine('postgresql://' + db))
-    get_crowd_repository = lambda:crowd.Repository(crowd_db())
-    return dict(crowd_db=crowd_db,
-                get_crowd_repository=get_crowd_repository,
+        db = '/carenet_test'
+    DB = sessionmaker(create_engine('postgresql://' + db))
+    return dict(DB=DB,
+                get_auth_repo = lambda:auth.Repository(DB()),
                 env=env)
 
 

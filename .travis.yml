@@ -12,8 +12,8 @@ before_install:
 
 install: 
   - ./build.sh setup
-  - createdb crowdtest
-  - psql -d crowdtest -f crowd-test.sql
+  - createdb carenet_test
+  - psql -d carenet_test -f test-db.sql
 
 script: 
   - ./gulp test

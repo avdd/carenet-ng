@@ -6,7 +6,7 @@ import mock
 
 from carenetng import core
 from carenetng import login
-from carenetng import crowd
+from carenetng import auth
 
 
 @pytest.fixture()
@@ -20,7 +20,7 @@ class mock_context:
         return a == b
 
 
-class mock_repository(crowd.Repository):
+class mock_repository(auth.Repository):
     def __init__(self, user):
         self.user = user
         self.passlib_context = mock_context()
@@ -28,62 +28,62 @@ class mock_repository(crowd.Repository):
         return self.user
 
 
-def test_crowd_query():
+def test_auth_query():
     db = mock.Mock()
-    repo = crowd.Repository(db)
+    repo = auth.Repository(db)
     u = repo.get_user('test')
-    db.query.assert_called_once_with(crowd.User)
+    db.query.assert_called_once_with(auth.User)
 
 
-def test_crowd_no_user():
+def test_auth_no_user():
     repo = mock_repository(None)
-    with pytest.raises(crowd.NoUser):
+    with pytest.raises(auth.NoUser):
         repo.authenticate(None, None)
 
 
-def test_crowd_no_credential():
-    u = crowd.User()
+def test_auth_no_credential():
+    u = auth.User()
     repo = mock_repository(u)
-    with pytest.raises(crowd.BadUser):
+    with pytest.raises(auth.BadUser):
         repo.authenticate(None, None)
 
 
-def test_crowd_not_active():
-    u = crowd.User()
+def test_auth_not_active():
+    u = auth.User()
     u.enabled = False
     repo = mock_repository(u)
-    with pytest.raises(crowd.BadUser):
+    with pytest.raises(auth.BadUser):
         repo.authenticate(None, None)
 
 
-def test_crowd_password_unset():
-    u = crowd.User()
+def test_auth_password_unset():
+    u = auth.User()
     u.enabled = True
     repo = mock_repository(u)
-    with pytest.raises(crowd.BadUser):
+    with pytest.raises(auth.BadUser):
         repo.authenticate(None, None)
 
 
-def test_crowd_empty_password():
-    u = crowd.User()
+def test_auth_empty_password():
+    u = auth.User()
     u.passhash = 'non-empty'
     u.enabled = True
     repo = mock_repository(u)
-    with pytest.raises(crowd.BadPassword):
+    with pytest.raises(auth.BadPassword):
         repo.authenticate(None, None)
 
 
-def test_crowd_wrong_password():
-    u = crowd.User()
+def test_auth_wrong_password():
+    u = auth.User()
     u.passhash = 'password'
     u.enabled = True
     repo = mock_repository(u)
-    with pytest.raises(crowd.BadPassword):
+    with pytest.raises(auth.BadPassword):
         repo.authenticate(None, 'incorrect')
 
 
-def test_crowd_bad_data():
-    u = crowd.User()
+def test_auth_bad_data():
+    u = auth.User()
     class raises:
         def verify(*x):
             raise ValueError
@@ -91,12 +91,12 @@ def test_crowd_bad_data():
     u.enabled = True
     repo = mock_repository(u)
     repo.passlib_context = raises()
-    with pytest.raises(crowd.BadPassword):
+    with pytest.raises(auth.BadPassword):
         repo.authenticate(None, 'whatever')
 
 
-def test_crowd_good_password():
-    u = crowd.User()
+def test_auth_good_password():
+    u = auth.User()
     u.passhash = 'good password'
     u.enabled = True
     repo = mock_repository(u)
@@ -104,8 +104,8 @@ def test_crowd_good_password():
     assert result is u
 
 
-def test_crowd_unicode_password():
-    u = crowd.User()
+def test_auth_unicode_password():
+    u = auth.User()
     password = u'\N{SNOWMAN}password'
     u.passhash = password
     u.enabled = True
@@ -114,24 +114,24 @@ def test_crowd_unicode_password():
     assert result is u
 
 
-def test_crowd_exception_str():
-    e = crowd.BadUser('foo')
+def test_auth_exception_str():
+    e = auth.BadUser('foo')
     assert str(e) == 'BadUser: foo'
 
 
 def test_login_rejects_invalid(cx):
-    cx.get_crowd_repository = lambda:mock_repository(None)
+    cx.get_auth_repo = lambda:mock_repository(None)
     r = login.login(cx, 'invalid', 'invalid')
     assert not r
 
 
 def test_login_accepts_valid(cx):
-    test_user = crowd.User()
+    test_user = auth.User()
     test_user.enabled
-    u = crowd.User()
+    u = auth.User()
     u.passhash = 'good password'
     u.enabled = True
-    cx.get_crowd_repository = lambda:mock_repository(u)
+    cx.get_auth_repo = lambda:mock_repository(u)
     r = login.login(cx, 'test-user', 'good password')
     assert r is True
 
