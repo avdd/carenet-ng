@@ -1460,7 +1460,12 @@
       "version": "1.0.0"
     },
     "d": {
-      "version": "0.1.1"
+      "version": "1.0.0",
+      "dependencies": {
+        "es5-ext": {
+          "version": "0.10.10"
+        }
+      }
     },
     "dateformat": {
       "version": "1.0.11"
@@ -1564,10 +1569,20 @@
       "version": "0.10.8"
     },
     "es6-iterator": {
-      "version": "2.0.0"
+      "version": "2.0.0",
+      "dependencies": {
+        "d": {
+          "version": "0.1.1"
+        }
+      }
     },
     "es6-symbol": {
-      "version": "3.0.1"
+      "version": "3.0.1",
+      "dependencies": {
+        "d": {
+          "version": "0.1.1"
+        }
+      }
     },
     "escape-html": {
       "version": "1.0.2"
