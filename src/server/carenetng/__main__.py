@@ -18,11 +18,11 @@ cli = click.Group()
 #pass_info = click.make_pass_decorator(ScriptInfo, ensure=True)
 
 
-wsgi = config = None
+wsgi = None
 
 
 def init():
-    global wsgi, config
+    global wsgi
     config = get_config()
     #init_logging(config)
     init_modules()
