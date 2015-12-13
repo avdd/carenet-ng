@@ -56,7 +56,7 @@ def default_converters(api):
     api.float = float
     api.str = unicode
     api.set = set
-    converter = api._converter = converter_decorator(api)
+    converter = api.converter = converter_decorator(api)
 
     @converter
     class Object:

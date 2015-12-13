@@ -13,16 +13,15 @@ from . import auth
 def login(cx, username, password):
     repo = cx.get_auth_repo()
     try:
-        repo.authenticate(username, password)
-        log.info('LOGIN OK %s', username)
-        return create_session(cx, username)
+        user = repo.authenticate(username, password)
+        log.info('LOGIN OK %s', user)
+        return create_session(cx, user)
     except auth.SecurityException, e:
         log.info('LOGIN FAILED: %s', e)
         return None
 
 
-
 def create_session(cx, user):
-    return True
+    return {'user': user.username}
 
 

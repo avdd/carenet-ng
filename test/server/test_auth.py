@@ -129,10 +129,11 @@ def test_login_accepts_valid(cx):
     test_user = auth.User()
     test_user.enabled
     u = auth.User()
+    u.username = 'test-user'
     u.passhash = 'good password'
     u.enabled = True
     cx.get_auth_repo = lambda:mock_repository(u)
     r = login.login(cx, 'test-user', 'good password')
-    assert r is True
+    assert r == {'user': 'test-user'}
 
 
