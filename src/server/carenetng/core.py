@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 registry = {}
 api = create_registry(registry)
-converter = api._converter
 
 
 class context:
