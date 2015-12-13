@@ -217,8 +217,8 @@ describe('init', function () {
     });
 
     it('redirects to login', function () {
-      _.httpBackend.expectGET('templates/main.html').respond(200);
-      _.httpBackend.expectGET('templates/login_form.html').respond(200);
+      _.httpBackend.expectGET('templates/view/main.html').respond(200);
+      _.httpBackend.expectGET('templates/form/login.html').respond(200);
       _.location.path('/view/main');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/form/login');
@@ -229,8 +229,8 @@ describe('init', function () {
       Inject('App');
       _.App.session = true;
       _.App.initCommand('login');
-      _.httpBackend.expectGET('templates/login_form.html').respond(200);
-      _.httpBackend.expectGET('templates/main.html').respond(200);
+      _.httpBackend.expectGET('templates/form/login.html').respond(200);
+      _.httpBackend.expectGET('templates/view/main.html').respond(200);
       _.location.path('/form/login');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/view/main');
@@ -239,7 +239,7 @@ describe('init', function () {
 
     it('doesn\'t redirect if logged in', function () {
       _.App.session = true;
-      _.httpBackend.expectGET('templates/main.html').respond(200);
+      _.httpBackend.expectGET('templates/view/main.html').respond(200);
       _.location.path('/view/main');
       _.httpBackend.flush();
       expect(_.location.url()).toEqual('/view/main');
@@ -247,8 +247,8 @@ describe('init', function () {
 
     it('redirects with uninitialised command', function () {
       _.App.session = true;
-      _.httpBackend.expectGET('templates/hello_form.html').respond(200);
-      _.httpBackend.expectGET('templates/main.html').respond(200);
+      _.httpBackend.expectGET('templates/form/hello.html').respond(200);
+      _.httpBackend.expectGET('templates/view/main.html').respond(200);
       _.App.registerCommand('hello', function () {});
       _.location.path('/form/hello');
       _.httpBackend.flush();
@@ -256,8 +256,8 @@ describe('init', function () {
     });
 
     it('shows error on error', function () {
-      _.httpBackend.expectGET('templates/main.html').respond(200);
-      _.httpBackend.expectGET('templates/login_form.html').respond(200);
+      _.httpBackend.expectGET('templates/view/main.html').respond(200);
+      _.httpBackend.expectGET('templates/form/login.html').respond(200);
       _.httpBackend.flush();
       Inject('$route');
     });

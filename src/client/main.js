@@ -55,11 +55,11 @@ function routeConfig($routeProvider) {
   }
 
   function getFormTemplate(params) {
-    return 'templates/' + params.name + '_form.html';
+    return 'templates/form/' + params.name + '.html';
   }
 
   function getViewTemplate(params) {
-    return 'templates/' + params.name + '.html';
+    return 'templates/view/' + params.name + '.html';
   }
 
 }
