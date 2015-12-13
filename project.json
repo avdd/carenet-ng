@@ -43,7 +43,7 @@
     "client_html":  ["index.html"],
     "client_misc":  ["misc/*"],
     "client_templates":
-                    ["templates/*.html"],
+                    ["templates/*/*.html"],
     "client_test":  ["*.js"],
     "server_py":    ["carenetng/*.py"],
     "server_test":  ["*.py"],
