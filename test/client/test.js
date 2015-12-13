@@ -7,6 +7,15 @@ beforeEach(function () {
   _ = {};
 });
 
+function FakeData($q) {
+  var data = {};
+  this.get = function (key) {
+    return $q(function (resolve) { resolve(data[key]) });
+  }
+  this.set = function (key, value) {
+    return $q(function (resolve) { data[key] = value; resolve(value) });
+  }
+}
 
 function Inject() {
 
@@ -161,6 +170,10 @@ describe('core', function () {
 
   describe('App.authenticate', function () {
 
+    beforeEach(module(function ($provide) {
+      $provide.service('Data', FakeData);
+    }));
+
     beforeEach(Inject('App', 'Api', '$q', '$rootScope'));
 
     it('handles success', function () {
@@ -171,7 +184,9 @@ describe('core', function () {
         .then(function (s) { expect(s).toBeTruthy() })
         .catch(function (e) { fail('Unexpected failure') });
       _.rootScope.$apply();
-      expect(_.App.getSession()).toBe(true);
+      _.App.getSession()
+        .then(function (s) { expect(s).toBeTruthy() })
+        .catch(function (e) { fail('Unexpected failure') });
     });
 
     it('handles auth failure', function () {
@@ -182,7 +197,9 @@ describe('core', function () {
         .then(function (s) { fail('Expected failure') })
         .catch(function (e) { expect(e.message).toBe('Login failed') });
       _.rootScope.$apply();
-      expect(_.App.getSession()).toBeFalsy();
+      _.App.getSession()
+        .then(function (s) { expect(s).toBeFalsy() })
+        .catch(function (e) { fail('Unexpected failure') });
     });
 
     it('handles auth error', function () {
@@ -193,7 +210,9 @@ describe('core', function () {
         .then(function (s) { fail('Expected failure') })
         .catch(function (e) { expect(e.message).toBe('poop') });
       _.rootScope.$apply();
-      expect(_.App.getSession()).toBeFalsy();
+      _.App.getSession()
+        .then(function (s) { expect(s).toBeFalsy() })
+        .catch(function (e) { fail('Unexpected failure') });
     });
   });
 });
@@ -202,10 +221,13 @@ describe('core', function () {
 describe('init', function () {
 
   beforeEach(module('init'));
+  beforeEach(module(function ($provide) {
+    $provide.service('Data', FakeData);
+  }));
 
   describe('RouteConfig', function () {
 
-    beforeEach(Inject('App', '$location', '$rootScope', '$httpBackend', '$route'));
+    beforeEach(Inject('App', 'Data', '$location', '$rootScope', '$httpBackend', '$route'));
 
     afterEach(function () {
       _.httpBackend.verifyNoOutstandingExpectation();
@@ -227,7 +249,7 @@ describe('init', function () {
     /*
     xit('login redirects if logged in', function () {
       Inject('App');
-      _.App.session = true;
+      _.App.setSession(true);
       _.App.initCommand('login');
       _.httpBackend.expectGET('templates/form/login.html').respond(200);
       _.httpBackend.expectGET('templates/view/main.html').respond(200);
@@ -238,7 +260,7 @@ describe('init', function () {
     */
 
     it('doesn\'t redirect if logged in', function () {
-      _.App.session = true;
+      _.Data.set('session', true);
       _.httpBackend.expectGET('templates/view/main.html').respond(200);
       _.location.path('/view/main');
       _.httpBackend.flush();
@@ -246,7 +268,7 @@ describe('init', function () {
     });
 
     it('redirects with uninitialised command', function () {
-      _.App.session = true;
+      _.Data.set('session', true);
       _.httpBackend.expectGET('templates/form/hello.html').respond(200);
       _.httpBackend.expectGET('templates/view/main.html').respond(200);
       _.App.registerCommand('hello', function () {});
@@ -255,12 +277,6 @@ describe('init', function () {
       expect(_.location.url()).toEqual('/view/main');
     });
 
-    it('shows error on error', function () {
-      _.httpBackend.expectGET('templates/view/main.html').respond(200);
-      _.httpBackend.expectGET('templates/form/login.html').respond(200);
-      _.httpBackend.flush();
-      Inject('$route');
-    });
   });
 
 

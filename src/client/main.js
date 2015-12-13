@@ -43,8 +43,11 @@ function routeConfig($routeProvider) {
     .otherwise({redirectTo: '/error'});
 
   function allowView(App, $q, $location) {
-    if (!App.getSession($location.url()))
-      return $q.reject({command: 'login'});
+    return App.getSession($location.url())
+      .then(function (s) {
+        if (!s)
+          return $q.reject({command: 'login'});
+      });
   }
 
   function allowForm(App, $q, $route) {
@@ -139,14 +142,14 @@ function FormCtrl(App, $routeParams, $location, $q) {
 angular.module('core', [])
   .service('App', AppService)
   .service('Api', ApiService)
+  .service('Data', DataService)
   ;
 
 
 
 
-function AppService(Api, $q) {
+function AppService(Api, Data, $q) {
   var self = this;
-  this.session = null;
   this.requested_url = null;
 
   var _queries = {};
@@ -195,7 +198,7 @@ function AppService(Api, $q) {
   this.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
       if (result)
-        return self.session = result;
+        return Data.set('session', result);
       else
         return $q.reject({message: 'Login failed'});
     });
@@ -204,8 +207,9 @@ function AppService(Api, $q) {
   this.getSession = function getSession(url) {
     if (url)
       this.requested_url = url;
-    return this.session;
+    return Data.get('session');
   }
+
 }
 
 
@@ -228,6 +232,19 @@ function ApiService($http, $q) {
   }
 
 }
+
+
+// istanbul ignore next
+function DataService($window, $q) {
+  var LF = $window.localforage;
+  this.get = function getItem(key) {
+    return LF.getItem(key);
+  }
+  this.set = function setItem(key, value) {
+    return LF.setItem(key, value);
+  }
+}
+
 
 
 angular.module('util', [])

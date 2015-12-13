@@ -68,15 +68,19 @@ describe('login', function () {
       .toContain('Hello');
   });
 
-
-
-//-----
-
-  xit('maintains the session', function () {
+  it('maintains the session', function () {
     get('view/main');
     expectUrl('view/main');
   });
 
+// });
+
+
+// describe('main form sequence', function () {
+  xit('shows empty list', function () {
+    get('view/list-records');
+    expectUrl('view/list-records');
+    expect(element(by.tagName('ul')).getText())
+      .toEqual('');
+  });
 });
-
-
