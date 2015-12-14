@@ -4,7 +4,7 @@ function get(path) {
 }
 
 function expectUrl(x) {
-  browser.sleep(5); // settle!
+  browser.sleep(10); // settle!
   var url = browser.getLocationAbsUrl();
   expect(url).toEqual('/' + x);
 }
