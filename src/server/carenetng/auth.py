@@ -19,21 +19,25 @@ from sqlalchemy.orm import sessionmaker, relationship, joinedload
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 
-from passlib.context import CryptContext
+import logging
+logging.getLogger('passlib').setLevel(logging.INFO)
 
 PASSLIB_SCHEMES = ['bcrypt']
 PASSLIB_DEFAULT = 'bcrypt'
+
+from passlib.context import CryptContext
+passlib_context = CryptContext(schemes=PASSLIB_SCHEMES,
+                               default=PASSLIB_DEFAULT,
+                               deprecated=['auto'])
+
 
 Entity = declarative_base()
 
 
 class Repository:
-    def __init__(self, db):
+    def __init__(self, db, verify):
         self.db = db
-        self.passlib_context = CryptContext(schemes=PASSLIB_SCHEMES,
-                                            default=PASSLIB_DEFAULT,
-                                            deprecated=['auto'])
-
+        self.verify = verify
 
     def get_user(self, username):
         return (self.db.query(User)
@@ -51,13 +55,13 @@ class Repository:
             raise BadUser
         if not clearpass:
             raise BadPassword
-        if not self.verify_hash(clearpass, u.passhash):
+        if not self.call_verify(clearpass, u.passhash):
             raise BadPassword
         return u
 
-    def verify_hash(self, clearpass, passhash):
+    def call_verify(self, clearpass, passhash):
         try:
-            return self.passlib_context.verify(clearpass, passhash)
+            return self.verify(clearpass, passhash)
         except ValueError:
             pass
         return False

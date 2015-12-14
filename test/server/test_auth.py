@@ -15,22 +15,18 @@ def cx():
     return cx
 
 
-class mock_context:
+class mock_repository(auth.Repository):
+    def __init__(self, user):
+        self.user = user
+    def get_user(self, _):
+        return self.user
     def verify(self, a, b):
         return a == b
 
 
-class mock_repository(auth.Repository):
-    def __init__(self, user):
-        self.user = user
-        self.passlib_context = mock_context()
-    def get_user(self, _):
-        return self.user
-
-
 def test_auth_query():
     db = mock.Mock()
-    repo = auth.Repository(db)
+    repo = auth.Repository(db, None)
     u = repo.get_user('test')
     db.query.assert_called_once_with(auth.User)
 
@@ -84,13 +80,12 @@ def test_auth_wrong_password():
 
 def test_auth_bad_data():
     u = auth.User()
-    class raises:
-        def verify(*x):
-            raise ValueError
+    def verify(*x):
+        raise ValueError
     u.passhash = 'malformed'
     u.enabled = True
     repo = mock_repository(u)
-    repo.passlib_context = raises()
+    repo.verify = verify
     with pytest.raises(auth.BadPassword):
         repo.authenticate(None, 'whatever')
 

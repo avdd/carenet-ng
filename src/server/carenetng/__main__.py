@@ -42,10 +42,16 @@ def get_config():
         db = 'cf_carenet@:5433/cf_carenet_live'
     else:
         db = '/carenet_test'
+
+    def repo_factory():
+        return auth.Repository(DB(), auth.passlib_context.verify)
+
     DB = sessionmaker(create_engine('postgresql://' + db))
-    return dict(DB=DB,
-                get_auth_repo = lambda:auth.Repository(DB()),
-                env=env)
+    config = dict(DB=DB,
+                  env=env,
+                  get_auth_repo=repo_factory)
+    return config
+
 
 
 def main():
