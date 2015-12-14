@@ -1,22 +1,24 @@
 
 var wait = 0;
-if (process.env.TRAVIS)
+if (0 && process.env.TRAVIS)
   wait = 1000;
 
 function get(path) {
-  return browser.get('#/' + path);
+  return browser.setLocation(path);
+}
+
+function getUrl() {
+  if (wait)
+    browser.sleep(wait);
+  return browser.getLocationAbsUrl();
 }
 
 function expectUrl(x) {
-  if (wait)
-    browser.sleep(wait);
-  var url = browser.getLocationAbsUrl();
-  expect(url).toEqual('/' + x);
+  expect(getUrl()).toEqual('/' + x);
 }
 
 function expectUrlNot(x) {
-  var url = browser.getLocationAbsUrl();
-  expect(url).not.toEqual('/' + x);
+  expect(getUrl()).not.toEqual('/' + x);
 }
 
 function getLog(f) {
@@ -34,6 +36,8 @@ afterEach(function () {
   });
 });
 
+
+browser.get('/');
 
 describe('environment', function () {
   function getStorageDriver() {
@@ -56,7 +60,6 @@ describe('environment', function () {
   }
 
   it('is sane', function () {
-    get('/');
     browser.executeScript(getStorageDriver)
       .then(function (x) {
         expect(x).toEqual('asyncStorage');
@@ -79,7 +82,7 @@ describe('environment', function () {
 
 describe('clean session', function () {
   it('redirects to login', function () {
-    get('view/main')
+    get('view/main');
     expectUrl('form/login');
   });
 });
@@ -125,11 +128,11 @@ describe('login', function () {
     expectUrl('view/main');
   });
 
-// });
+});
 
 
-// describe('main form sequence', function () {
-  xit('shows empty list', function () {
+xdescribe('main form sequence', function () {
+  it('shows empty list', function () {
     get('view/list-records');
     expectUrl('view/list-records');
     expect(element(by.tagName('ul')).getText())

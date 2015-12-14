@@ -43,8 +43,7 @@ function routeConfig($routeProvider) {
     .when('/error', {templateUrl: 'templates/error.html'})
     .otherwise({redirectTo: '/error'});
 
-  function allowView(App, $q, $location, $route) {
-var params = $route.current.params
+  function allowView(App, $q, $location) {
     return App.getSession($location.url())
       .then(function (s) {
         if (!s)
@@ -100,6 +99,7 @@ function routeInit(App, $rootScope, $location) {
       });
     }
   })
+
 }
 
 function ViewCtrl(App, $routeParams, $location) {
