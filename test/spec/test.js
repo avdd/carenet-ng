@@ -52,6 +52,11 @@ describe('environment', function () {
     window.localforage.getItem('--test-item')
       .then(cb);
   }
+  function length() {
+    var cb = arguments[arguments.length-1];
+    window.localforage.length()
+      .then(cb);
+  }
 
   it('is sane', function () {
     get('/');
@@ -66,6 +71,10 @@ describe('environment', function () {
     browser.executeAsyncScript(getItem)
       .then(function (x) {
         expect(x).toEqual('--test-value');
+      });
+    browser.executeAsyncScript(length)
+      .then(function (x) {
+        expect(x).toEqual(1);
       });
   });
 });
@@ -103,7 +112,7 @@ describe('login', function () {
       .toMatch(/failed/i);
   });
 
-  fit('accepts valid credentials', function () {
+  it('accepts valid credentials', function () {
     get('view/main');
     expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
