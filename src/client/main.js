@@ -115,6 +115,8 @@ LOG('URL: ' + App.requested_url);
 }
 
 function ViewCtrl(App, $routeParams, $location) {
+LOG('location: ' + window.location.href);
+LOG('$location: ' + $location.url());
   this.query = App.getQuery($routeParams.name);
 }
 
