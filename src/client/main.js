@@ -3,12 +3,6 @@
 'use strict';
 
 
-window.__messages = [];
-function LOG(msg) {
-  window.__messages.push(msg);
-  console.warn(msg);
-}
-
 var CONFIG = window.CONFIG || {};
 
 
@@ -51,14 +45,10 @@ function routeConfig($routeProvider) {
 
   function allowView(App, $q, $location, $route) {
 var params = $route.current.params
-LOG('allowView: ' + params.name);
     return App.getSession($location.url())
       .then(function (s) {
-LOG('getSession: ' + (s && s.user || s));
-if (!s) LOG('rejecting');
         if (!s)
           return $q.reject({command: 'login'});
-LOG('allowView OK');
       });
   }
 
@@ -106,8 +96,6 @@ function routeInit(App, $rootScope, $location) {
     }
     this.next = function (data) {
       return App.authenticate(data).then(function ok(s) {
-LOG('Login OK:' + (s && s.user || s));
-LOG('URL: ' + App.requested_url);
         return App.requested_url;
       });
     }
@@ -115,12 +103,6 @@ LOG('URL: ' + App.requested_url);
 }
 
 function ViewCtrl(App, $routeParams, $location) {
-LOG('location: ' + window.location.href);
-LOG('$location: ' + $location.url());
-localforage.getItem('session')
-  .then(function (s) {
-    LOG('session:' + s);
-  });
   this.query = App.getQuery($routeParams.name);
 }
 
@@ -136,7 +118,6 @@ function FormCtrl(App, $routeParams, $location, $q) {
   }
 
   this.go = function(path) {
-LOG('go: ' + path);
     $location.path(path).replace();
   }
 
@@ -149,11 +130,9 @@ LOG('go: ' + path);
     self.form.message = '';
     $q.when(this.command.next(this.form.data)).then(ok).catch(fail);
     function ok(state) {
-LOG('submit OK: ' + state);
       self.go(state)
     }
     function fail(e) {
-LOG('submit fail: ' + (e && e.message || e));
       self.form.message = e && e.message || 'Unknown error';
     }
   }
@@ -219,7 +198,6 @@ function AppService(Api, Data, $q) {
 
   this.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
-LOG('API.login: ' + (result && result.user || result));
       if (result)
         return Data.set('session', result);
       else
@@ -260,19 +238,11 @@ function ApiService($http, $q) {
 function DataService($window, $q) {
   var LF = $window.localforage;
   this.get = function getItem(key) {
-LOG('Data.get: ' + key);
-    // return LF.getItem(key);
-    var x = LF.getItem(key);
-LOG('result: ' + x);
-    return x
+    return LF.getItem(key);
   }
 
   this.set = function setItem(key, value) {
-LOG('Data.set: ' + key + ', ' + value);
-    // return LF.setItem(key, value);
-    var x = LF.setItem(key, value);
-LOG('result: ' + x);
-    return x
+    return LF.setItem(key, value);
   }
 
 }

@@ -4,6 +4,7 @@ function get(path) {
 }
 
 function expectUrl(x) {
+  browser.sleep(5); // settle!
   var url = browser.getLocationAbsUrl();
   expect(url).toEqual('/' + x);
 }
@@ -26,15 +27,6 @@ afterEach(function () {
         console.log(' * ' + x.level + ': ' + x.message);
     });
   });
-  function getMessages() {
-    return window.__messages;
-  }
-  browser.executeScript(getMessages)
-    .then(function (msgs) {
-        msgs.forEach(function (x) {
-          console.log(' * ' + x);
-        });
-    });
 });
 
 
@@ -114,21 +106,16 @@ describe('login', function () {
 
   it('accepts valid credentials', function () {
     get('view/main');
-    browser.sleep(10);
-    browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });
     expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
-    browser.sleep(10);
-    browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });
     expectUrl('view/main');
-    browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });
     expect(element(by.tagName('h1')).getText())
       .toContain('Hello');
   });
 
-  xit('maintains the session', function () {
+  it('maintains the session', function () {
     get('view/main');
     expectUrl('view/main');
   });
