@@ -1,15 +1,9 @@
 
-var wait = 0;
-if (0 && process.env.TRAVIS)
-  wait = 1000;
-
 function get(path) {
   return browser.setLocation(path);
 }
 
 function getUrl() {
-  if (wait)
-    browser.sleep(wait);
   return browser.getLocationAbsUrl();
 }
 
@@ -38,6 +32,7 @@ afterEach(function () {
 
 
 browser.get('/');
+
 
 describe('environment', function () {
   function getStorageDriver() {
