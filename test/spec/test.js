@@ -21,10 +21,20 @@ function getLog(f) {
 afterEach(function () {
   getLog().then(function (log) {
     log.forEach(function (x) {
-      // if (x.level.value > 900)
-        console.log(' * ' + x.message);
+      // because firefox logs (only) internal warnings
+      if (x.level.value > 900)
+        console.log(' * ' + x.level + ': ' + x.message);
     });
   });
+  function getMessages() {
+    return window.__messages;
+  }
+  browser.executeScript(getMessages)
+    .then(function (msgs) {
+        msgs.forEach(function (x) {
+          console.log(' * ' + x);
+        });
+    });
 });
 
 

@@ -3,6 +3,12 @@
 'use strict';
 
 
+window.__messages = [];
+function LOG(msg) {
+  window.__messages.push(msg);
+  console.warn(msg);
+}
+
 var CONFIG = window.CONFIG || {};
 
 
@@ -46,7 +52,7 @@ function routeConfig($routeProvider) {
   function allowView(App, $q, $location) {
     return App.getSession($location.url())
       .then(function (s) {
-console.warn('getSession: ' + (s && s.user || s));
+LOG('getSession: ' + (s && s.user || s));
         if (!s)
           return $q.reject({command: 'login'});
       });
@@ -96,7 +102,7 @@ function routeInit(App, $rootScope, $location) {
     }
     this.next = function (data) {
       return App.authenticate(data).then(function ok(s) {
-console.warn('Login OK:' + (s && s.user || s));
+LOG('Login OK:' + (s && s.user || s));
         return App.requested_url;
       });
     }
@@ -199,7 +205,7 @@ function AppService(Api, Data, $q) {
 
   this.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
-console.warn('API.login: ' + (result && result.user || result));
+LOG('API.login: ' + (result && result.user || result));
       if (result)
         return Data.set('session', result);
       else
@@ -240,17 +246,17 @@ function ApiService($http, $q) {
 function DataService($window, $q) {
   var LF = $window.localforage;
   this.get = function getItem(key) {
-console.warn('Data.get: ' + key);
+LOG('Data.get: ' + key);
     // return LF.getItem(key);
     var x = LF.getItem(key);
-console.warn('result: ' + x);
+LOG('result: ' + x);
     return x
   }
   this.set = function setItem(key, value) {
-console.warn('Data.set: ' + key + ', ' + value);
+LOG('Data.set: ' + key + ', ' + value);
     // return LF.setItem(key, value);
     var x = LF.setItem(key, value);
-console.warn('result: ' + x);
+LOG('result: ' + x);
     return x
   }
 }
