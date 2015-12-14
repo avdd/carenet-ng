@@ -112,7 +112,7 @@ describe('login', function () {
   it('accepts valid credentials', function () {
     get('view/main');
     expectUrl('form/login');
-    element(by.model('self.form.data.username')).sendKeys('devel-only');
+    element(by.model('self.form.data.username')).sendKeys('devel');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
     expectUrl('view/main');

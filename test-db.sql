@@ -15,16 +15,16 @@ CREATE TABLE sync_user (
     password_stamp TIMESTAMP WITH TIME ZONE
 );
 
--- devel-only:password
+-- devel:password
 COPY sync_user (username, passhash, first_name, last_name, email_address, enabled, password_stamp) FROM stdin;
-devel-only	$2a$12$a5I9W6WlMHcLpKL8JVNl2OahH8Xkh3HtUxjlv/zBKb3vTSwRP6gQi	devel	only	devel@localhost	true	2015-12-12 19:33:06.661506+0
+devel	$2a$12$a5I9W6WlMHcLpKL8JVNl2OahH8Xkh3HtUxjlv/zBKb3vTSwRP6gQi	Devel	Only	devel@localhost	true	2015-12-12 19:33:06.661506+0
 \.
 
 
 COPY sync_user_group_assoc (username, groupname) FROM stdin;
-devel-only	medical-database
-devel-only	medical-database-editor-cf
-devel-only	medical-database-editor-hne
+devel	medical-database
+devel	medical-database-editor-cf
+devel	medical-database-editor-hne
 \.
 
 
