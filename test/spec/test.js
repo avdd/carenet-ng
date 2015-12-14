@@ -112,13 +112,16 @@ describe('login', function () {
       .toMatch(/failed/i);
   });
 
-  it('accepts valid credentials', function () {
+  fit('accepts valid credentials', function () {
     get('view/main');
+    browser.getCurrentUrl() .then(function (url) { console.log('URL: ' + url); });
     expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
+    browser.getCurrentUrl() .then(function (url) { console.log('URL: ' + url); });
     expectUrl('view/main');
+    browser.getCurrentUrl() .then(function (url) { console.log('URL: ' + url); });
     expect(element(by.tagName('h1')).getText())
       .toContain('Hello');
   });
