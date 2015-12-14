@@ -28,7 +28,7 @@ afterEach(function () {
 });
 
 
-fdescribe('environment', function () {
+describe('environment', function () {
   function getStorageDriver() {
     return window.localforage.driver();
   }
