@@ -112,15 +112,15 @@ describe('login', function () {
       .toMatch(/failed/i);
   });
 
-  fit('accepts valid credentials', function () {
+  it('accepts valid credentials', function () {
     get('view/main');
-    browser.sleep(2000);
+    browser.sleep(10);
     browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });
     expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
-    browser.sleep(2000);
+    browser.sleep(10);
     browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });
     expectUrl('view/main');
     browser.getCurrentUrl().then(function (url) { console.log('URL: ' + url); });

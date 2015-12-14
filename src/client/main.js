@@ -266,6 +266,7 @@ LOG('Data.get: ' + key);
 LOG('result: ' + x);
     return x
   }
+
   this.set = function setItem(key, value) {
 LOG('Data.set: ' + key + ', ' + value);
     // return LF.setItem(key, value);
@@ -273,6 +274,7 @@ LOG('Data.set: ' + key + ', ' + value);
 LOG('result: ' + x);
     return x
   }
+
 }
 
 
