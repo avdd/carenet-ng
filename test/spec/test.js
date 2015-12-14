@@ -21,7 +21,7 @@ function getLog(f) {
 afterEach(function () {
   getLog().then(function (log) {
     log.forEach(function (x) {
-      if (x.level.value > 900)
+      // if (x.level.value > 900)
         console.log(' * ' + x.message);
     });
   });

@@ -145,7 +145,7 @@ var timelog = (function () {
   return function log(msg) {
     var t = Date.now() - start;
     // msg = '[' + t + '] ' + msg;
-    console.warn(msg);
+    console.debug(msg);
     document.getElementById('log').innerHTML += msg + '\n';
   }
 
@@ -253,7 +253,6 @@ var timelog = (function () {
     }
 
     function checkingError(e) {
-      console.log(e);
       timelog('checking error: assuming OFFLINE');
       ready();
     }
@@ -270,7 +269,6 @@ var timelog = (function () {
     }
 
     function errorHandlerUnset(e) {
-      console.log(e);
       throw new Error('no error handler');
     }
 
