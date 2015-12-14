@@ -105,12 +105,12 @@ describe('login', function () {
 
   it('accepts valid credentials', function () {
     get('view/main');
-    browser.sleep(100); // settle!
+    browser.sleep(1000); // settle!
     expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
-    browser.sleep(100); // settle!
+    browser.sleep(1000); // settle!
     expectUrl('view/main');
     expect(element(by.tagName('h1')).getText())
       .toContain('Hello');
