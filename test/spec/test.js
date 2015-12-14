@@ -68,7 +68,7 @@ describe('login', function () {
       .toContain('Hello');
   });
 
-  it('maintains the session', function () {
+  xit('maintains the session', function () {
     get('view/main');
     expectUrl('view/main');
   });

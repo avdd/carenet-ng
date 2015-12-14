@@ -236,6 +236,14 @@ function ApiService($http, $q) {
 
 // istanbul ignore next
 function DataService($window, $q) {
+  var data = {};
+  this.get = function (key) {
+    return $q(function (resolve) { resolve(data[key]) });
+  }
+  this.set = function (key, value) {
+    return $q(function (resolve) { data[key] = value; resolve(value) });
+  }
+  /*
   var LF = $window.localforage;
   this.get = function getItem(key) {
     return LF.getItem(key);
@@ -243,6 +251,7 @@ function DataService($window, $q) {
   this.set = function setItem(key, value) {
     return LF.setItem(key, value);
   }
+  */
 }
 
 
