@@ -117,6 +117,10 @@ LOG('URL: ' + App.requested_url);
 function ViewCtrl(App, $routeParams, $location) {
 LOG('location: ' + window.location.href);
 LOG('$location: ' + $location.url());
+localforage.getItem('session')
+  .then(function (s) {
+    LOG('session:' + s);
+  });
   this.query = App.getQuery($routeParams.name);
 }
 
