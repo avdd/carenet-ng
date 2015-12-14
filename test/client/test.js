@@ -453,3 +453,42 @@ describe('init', function () {
 });
 
 
+describe('Data', function () {
+  beforeEach(module('core'));
+  beforeEach(Inject('$window', 'Data'));
+
+  it('calls localforage.getItem', function () {
+    spyOn(_.window.localforage, 'getItem').and.callFake(function (key) {
+      return 'result';
+    });
+    expect(_.Data.get('foo')).toEqual('result');
+  });
+  it('calls localforage.setItem', function () {
+    spyOn(_.window.localforage, 'setItem').and.callFake(function (key) {
+      return 'result';
+    });
+    expect(_.Data.set('foo', 'x')).toEqual('result');
+  });
+});
+
+
+describe('localforage', function () {
+  beforeEach(Inject('$window'));
+  it('works', function () {
+    var LF = _.window.localforage;
+    LF.setItem('foo', 'bar')
+      .then(function (r) { expect(r).toEqual('bar') })
+      .catch(function (e) { fail('unexpected failure') })
+    LF.length()
+      .then(function (r) { expect(r).toEqual(1) })
+      .catch(function (e) { fail('unexpected failure') })
+    LF.keys()
+      .then(function (r) { expect(r).toEqual(['foo']) })
+      .catch(function (e) { fail('unexpected failure') })
+    LF.getItem('foo')
+      .then(function (r) { expect(r).toEqual('bar') })
+      .catch(function (e) { fail('unexpected failure') })
+  });
+});
+
+

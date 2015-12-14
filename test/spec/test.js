@@ -28,12 +28,46 @@ afterEach(function () {
 });
 
 
+fdescribe('environment', function () {
+  function getStorageDriver() {
+    return window.localforage.driver();
+  }
+  function setItem() {
+    var cb = arguments[arguments.length-1];
+    window.localforage.setItem('--test-item', '--test-value')
+      .then(cb);
+  }
+  function getItem() {
+    var cb = arguments[arguments.length-1];
+    window.localforage.getItem('--test-item')
+      .then(cb);
+  }
+
+  it('is sane', function () {
+    get('/');
+    browser.executeScript(getStorageDriver)
+      .then(function (x) {
+        expect(x).toEqual('asyncStorage');
+      });
+    browser.executeAsyncScript(setItem)
+      .then(function (x) {
+        expect(x).toEqual('--test-value');
+      });
+    browser.executeAsyncScript(getItem)
+      .then(function (x) {
+        expect(x).toEqual('--test-value');
+      });
+  });
+});
+
+
 describe('clean session', function () {
   it('redirects to login', function () {
     get('view/main')
     expectUrl('form/login');
   });
 });
+
 
 describe('login', function () {
   it('form appears', function () {
