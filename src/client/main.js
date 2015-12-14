@@ -49,12 +49,16 @@ function routeConfig($routeProvider) {
     .when('/error', {templateUrl: 'templates/error.html'})
     .otherwise({redirectTo: '/error'});
 
-  function allowView(App, $q, $location) {
+  function allowView(App, $q, $location, $route) {
+var params = $route.current.params
+LOG('allowView: ' + params.name);
     return App.getSession($location.url())
       .then(function (s) {
 LOG('getSession: ' + (s && s.user || s));
+if (!s) LOG('rejecting');
         if (!s)
           return $q.reject({command: 'login'});
+LOG('allowView OK');
       });
   }
 
@@ -103,6 +107,7 @@ function routeInit(App, $rootScope, $location) {
     this.next = function (data) {
       return App.authenticate(data).then(function ok(s) {
 LOG('Login OK:' + (s && s.user || s));
+LOG('URL: ' + App.requested_url);
         return App.requested_url;
       });
     }
@@ -125,6 +130,7 @@ function FormCtrl(App, $routeParams, $location, $q) {
   }
 
   this.go = function(path) {
+LOG('go: ' + path);
     $location.path(path).replace();
   }
 
@@ -137,9 +143,11 @@ function FormCtrl(App, $routeParams, $location, $q) {
     self.form.message = '';
     $q.when(this.command.next(this.form.data)).then(ok).catch(fail);
     function ok(state) {
+LOG('submit OK: ' + state);
       self.go(state)
     }
     function fail(e) {
+LOG('submit fail: ' + (e && e.message || e));
       self.form.message = e && e.message || 'Unknown error';
     }
   }
