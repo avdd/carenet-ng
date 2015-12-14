@@ -81,7 +81,7 @@ describe('clean session', function () {
 
 describe('login', function () {
   it('form appears', function () {
-    get('form/login')
+    get('view/main');
     expectUrl('form/login');
     expect(element(by.model('self.form.data.username'))
            .isPresent()).toBe(true);
@@ -92,7 +92,8 @@ describe('login', function () {
   });
 
   it('rejects invalid credentials', function () {
-    get('form/login')
+    get('view/main');
+    expectUrl('form/login');
     var invalid = 'definitely-not-valid';
     element(by.model('self.form.data.username')).sendKeys(invalid);
     element(by.model('self.form.data.password')).sendKeys(invalid);
@@ -102,12 +103,13 @@ describe('login', function () {
       .toMatch(/failed/i);
   });
 
-  it('accepts valid credentials', function () {
+  fit('accepts valid credentials', function () {
     get('view/main');
+    expectUrl('form/login');
     element(by.model('self.form.data.username')).sendKeys('devel-only');
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
-    // expectUrl('view/main'); // is buggy?
+    expectUrl('view/main');
     expect(element(by.tagName('h1')).getText())
       .toContain('Hello');
   });
