@@ -22,12 +22,9 @@ from sqlalchemy.ext.declarative import declarative_base
 import logging
 logging.getLogger('passlib').setLevel(logging.INFO)
 
-PASSLIB_SCHEMES = ['bcrypt']
-PASSLIB_DEFAULT = 'bcrypt'
-
 from passlib.context import CryptContext
-passlib_context = CryptContext(schemes=PASSLIB_SCHEMES,
-                               default=PASSLIB_DEFAULT,
+passlib_context = CryptContext(schemes=['bcrypt'],
+                               default='bcrypt',
                                deprecated=['auto'])
 
 
