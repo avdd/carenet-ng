@@ -34,47 +34,6 @@ afterEach(function () {
 browser.get('/');
 
 
-xdescribe('environment', function () {
-  function getStorageDriver() {
-    return window.localforage.driver();
-  }
-  function setItem() {
-    var cb = arguments[arguments.length-1];
-    window.localforage.setItem('--test-item', '--test-value')
-      .then(cb);
-  }
-  function getItem() {
-    var cb = arguments[arguments.length-1];
-    window.localforage.getItem('--test-item')
-      .then(cb);
-  }
-  function length() {
-    var cb = arguments[arguments.length-1];
-    window.localforage.length()
-      .then(cb);
-  }
-
-  it('is sane', function () {
-    browser.executeScript(getStorageDriver)
-      .then(function (x) {
-        expect(x).toEqual('asyncStorage');
-      });
-    browser.executeAsyncScript(setItem)
-      .then(function (x) {
-        expect(x).toEqual('--test-value');
-      });
-    browser.executeAsyncScript(getItem)
-      .then(function (x) {
-        expect(x).toEqual('--test-value');
-      });
-    browser.executeAsyncScript(length)
-      .then(function (x) {
-        expect(x).toEqual(1);
-      });
-  });
-});
-
-
 describe('clean session', function () {
   it('redirects to login', function () {
     get('view/main');
