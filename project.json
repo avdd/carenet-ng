@@ -52,7 +52,10 @@
   },
 
   "test": {
-    "js": [
+    "jsearly": [
+      "es5-shim/es5-shim.js"
+    ],
+    "jslate": [
       "angular-mocks/angular-mocks.js"
     ]
   },
@@ -61,12 +64,24 @@
     "css": [
       "bootstrap/dist/css/bootstrap.css"
     ],
+    "cssmin": [
+      "bootstrap/dist/css/bootstrap.min.css"
+    ],
     "js": [
       "jquery/dist/jquery.js",
       "angular/angular.js",
       "angular-route/angular-route.js",
       "angular-bootstrap/ui-bootstrap-tpls.js",
-      "localforage/dist/localforage.js"
+      "pouchdb/dist/pouchdb.js",
+      "angular-pouchdb/angular-pouchdb.js"
+    ],
+    "jsmin": [
+      "jquery/dist/jquery.min.js",
+      "angular/angular.min.js",
+      "angular-route/angular-route.min.js",
+      "angular-bootstrap/ui-bootstrap-tpls.min.js",
+      "pouchdb/dist/pouchdb.min.js",
+      "angular-pouchdb/angular-pouchdb.min.js"
     ],
     "other": {
       "bootstrap/dist": [

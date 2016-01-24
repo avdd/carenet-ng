@@ -8,11 +8,11 @@ function getUrl() {
 }
 
 function expectUrl(x) {
-  expect(getUrl()).toEqual('/' + x);
+  expect(getUrl()).toMatch(x);
 }
 
 function expectUrlNot(x) {
-  expect(getUrl()).not.toEqual('/' + x);
+  expect(getUrl()).not.toMatch(x);
 }
 
 function getLog(f) {
@@ -34,7 +34,7 @@ afterEach(function () {
 browser.get('/');
 
 
-describe('environment', function () {
+xdescribe('environment', function () {
   function getStorageDriver() {
     return window.localforage.driver();
   }
@@ -114,8 +114,6 @@ describe('login', function () {
     element(by.model('self.form.data.password')).sendKeys('password');
     element(by.tagName('form')).submit();
     expectUrl('view/main');
-    expect(element(by.tagName('h1')).getText())
-      .toContain('Hello');
   });
 
   it('maintains the session', function () {
@@ -126,11 +124,31 @@ describe('login', function () {
 });
 
 
-xdescribe('main form sequence', function () {
+describe('main form sequence', function () {
   it('shows empty list', function () {
     get('view/list-records');
     expectUrl('view/list-records');
     expect(element(by.tagName('ul')).getText())
       .toEqual('');
   });
+
+  it('is error to view form directly', function () {
+    get('form/new-record');
+    expectUrl('error');
+  });
+
+  it('saves a new record', function () {
+    get('view/list-records');
+    element(by.buttonText('New record')).click();
+    expectUrl('form/new-record');
+    element(by.model('self.form.data.name')).sendKeys('John Doe');
+    element(by.model('self.form.data.age')).sendKeys('99');
+    element(by.tagName('form')).submit();
+    expectUrl(/view\/record\/ptr:\d+/);
+    expect(element(by.binding('self.query.record.name')).getText()).toContain('John Doe');
+    browser.navigate().back();
+    expectUrl('view/list-records');
+    expect(element(by.tagName('ul')).getText()) .toContain('John Doe');
+  });
+
 });

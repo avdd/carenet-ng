@@ -1,0 +1,16 @@
+
+
+<button class="btn btn-xblock btn-primary"
+        ng-click="self.initCommand('new-record')"
+        >
+    New record
+  </button>
+
+<ul>
+  <li ng-repeat="record in self.query.records">
+    <a href="#/view/record/{{record.id}}">
+      {{record.doc.name}}</a>
+  </li>
+
+</ul>
+

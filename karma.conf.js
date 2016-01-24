@@ -24,10 +24,11 @@ module.exports = function(config) {
   var project = loadJson('./project.json')
     , bower = loadJson('./.bowerrc')
     , vendor_js = prefixed(bower.directory, project.vendor.js)
-    , extra_js = prefixed(bower.directory, project.test.js)
+    , early_js = prefixed(bower.directory, project.test.jsearly)
+    , late_js = prefixed(bower.directory, project.test.jslate)
     , app_js = prefixed(project.paths.client_src, project.files.client_js)
     , test_js = prefixed(project.paths.client_test, project.files.client_test)
-    , files = vendor_js.concat(extra_js, test_js, app_js)
+    , files = [].concat(early_js, vendor_js, late_js, app_js, test_js)
 
     , coverage = {};
 

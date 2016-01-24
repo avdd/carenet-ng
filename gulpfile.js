@@ -128,8 +128,8 @@ function getConfig() {
   cp.vendor_src = bower.directory;
   config.vendor_css = prefixed(cp.vendor_prefix, config.vendor.css);
   config.vendor_js = prefixed(cp.vendor_prefix, config.vendor.js);
-  config.min_css = prefixed(cp.vendor_src, assetMin('css', config.vendor.css));
-  config.min_js = prefixed(cp.vendor_src, assetMin('js', config.vendor.js))
+  config.min_css = prefixed(cp.vendor_src, config.vendor.cssmin);
+  config.min_js = prefixed(cp.vendor_src, config.vendor.jsmin);
 
   if (process.env.VIRTUAL_ENV)
     cp.python_env = process.env.VIRTUAL_ENV;
@@ -818,14 +818,6 @@ function runCommand(bin, args) {
         q.reject(code)
     });
   return q.promise;
-}
-
-function assetMin(ext, l) {
-  var a = '.' + ext,
-      b = '.min' + a;
-  return l.map(function (f) {
-    return f.replace(a, b);
-  });
 }
 
 function passfail(passed) {

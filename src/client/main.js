@@ -4,58 +4,82 @@
 
 
 var CONFIG = window.CONFIG || {};
+var DEFAULT_SCREEN = '/view/main';
 
 
-angular.module('init', ['ngRoute', 'core', 'util'])
+angular.module('init', ['routing', 'registration', 'util']);
+
+
+angular.module('routing', ['ngRoute'])
   .controller('FormCtrl', FormCtrl)
   .controller('ViewCtrl', ViewCtrl)
+  .controller('ErrorCtrl', ErrorCtrl)
   .config(routeConfig)
   .run(routeInit)
   ;
 
-
-
-
 function routeConfig($routeProvider) {
 
-  $routeProvider.when('/view/:name', {
+  var viewRoute = {
     templateUrl: getViewTemplate,
     controller: 'ViewCtrl',
     controllerAs: 'self',
     resolve: {
-      '': allowView
+      session: getSession,
+      query: getQuery
     }
-  });
+  };
+
+  $routeProvider.when('/view/:name', viewRoute);
+  $routeProvider.when('/view/:name/:args*', viewRoute);
 
   $routeProvider.when('/form/:name', {
     templateUrl: getFormTemplate,
     controller: 'FormCtrl',
     controllerAs: 'self',
     resolve: {
-      '': allowForm
+      command: getCommand
     }
   });
 
-  var DEFAULT_SCREEN = '/view/main';
   $routeProvider
     .when('',  {redirectTo: DEFAULT_SCREEN})
     .when('/', {redirectTo: DEFAULT_SCREEN})
-    .when('/error', {templateUrl: 'templates/error.html'})
+    .when('/error', {
+      templateUrl: 'templates/error.html',
+      controller: 'ErrorCtrl',
+      controllerAs: 'self',
+    })
     .otherwise({redirectTo: '/error'});
 
-  function allowView(App, $q, $location) {
-    return App.getSession($location.url())
+  function getSession(App, $q, $location) {
+    "ngInject"
+    return App.getSession()
       .then(function (s) {
-        if (!s)
-          return $q.reject({command: 'login'});
-      });
+        App.loaded = true;
+        return s;
+        // TODO: check session?
+      })
+      .catch(function (e) {
+        var cmd = App.initCommand('login', $location.url());
+        return $q.reject({url: cmd.start});
+      })
   }
 
-  function allowForm(App, $q, $route) {
+  function getQuery(App, $route, $q) {
+    "ngInject"
+    var params = $route.current.params
+    var args = (params.args || '').split('/');
+    return App.getQuery(params.name, args)
+  }
+
+  function getCommand(App, $q, $route) {
+    "ngInject"
     var params = $route.current.params
     var cmd = App.getCurrent();
     if (!cmd || params.name != cmd.command_name)
-      return $q.reject({view: 'main'});
+      return $q.reject({message: 'invalid form invocation'});
+    return cmd;
   }
 
   function getFormTemplate(params) {
@@ -69,47 +93,45 @@ function routeConfig($routeProvider) {
 }
 
 
-function routeInit(App, $rootScope, $location) {
+function routeInit($rootScope, $location, $log) {
   $rootScope.version = CONFIG.channel + '-' + CONFIG.version;
 
   $rootScope.$on('$routeChangeError', function (ev, next, current, rej) {
-    var view;
-    // istanbul ignore next (else not covered)
-    if (rej.command)
-      view = App.initCommand(rej.command).start;
-    else if (rej.view)
-      view = 'view/' + rej.view
+    $log.log('route error:', (rej.message || rej));
+    if (rej && rej.url)
+      $location.path(rej.url).replace();
     else
-      view = 'error';
-    $location.path(view).replace();
+      $location.path('error').replace();
   });
-
-  App.registerQuery('main', function () {
-    this.message = 'Hello';
-  })
-
-  App.registerCommand('login', function () {
-    this.start = 'form/login';
-    this.isValid = function (data) {
-      return !!(data.username && data.password)
-    }
-    this.next = function (data) {
-      return App.authenticate(data).then(function ok(s) {
-        return App.requested_url;
-      });
-    }
-  })
-
-}
-
-function ViewCtrl(App, $routeParams, $location) {
-  this.query = App.getQuery($routeParams.name);
 }
 
 
-function FormCtrl(App, $routeParams, $location, $q) {
+function ErrorCtrl(App, $location, $window) {
+  this.label = 'Go ' + (App.loaded ? 'back' : 'home');
+  this.go = function() {
+    if (App.loaded)
+      $window.history.go(-1);
+    else
+      $location.path(DEFAULT_SCREEN).replace();
+  }
+}
+
+
+function ViewCtrl(query, $routeParams, $location) {
   var self = this;
-  this.command = App.getCurrent();
+  self.query = query;
+
+  self.initCommand = function () {
+    var cmd = query.app.initCommand.apply(null, arguments);
+    $location.path(cmd.start);
+  }
+
+}
+
+
+function FormCtrl(command, $routeParams, $location, $q) {
+  var self = this;
+  self.command = command;
   this.form = {
     break_code: 'sm',
     message: null,
@@ -122,93 +144,92 @@ function FormCtrl(App, $routeParams, $location, $q) {
   }
 
   this.changed = function changed() {
-    if (self.command.isValid(self.form.data))
-      self.form.submittable = true;
+    self.form.submittable = self.command.isValid(self.form.data);
   }
 
   this.submit = function () {
     self.form.message = '';
-    $q.when(this.command.next(this.form.data)).then(ok).catch(fail);
-    function ok(state) {
-      self.go(state)
-    }
-    function fail(e) {
-      self.form.message = e && e.message || 'Unknown error';
-    }
+    $q.when(self.command.next(self.form.data))
+      .then(function ok(state) {
+        self.go(state)
+      })
+      .catch(function fail(e) {
+        self.form.message = e && e.message || 'Unknown error';
+      });
   }
 }
 
 
 
-angular.module('core', [])
+
+angular.module('core', ['pouchdb'])
   .service('App', AppService)
   .service('Api', ApiService)
-  .service('Data', DataService)
+  .factory('Data', DataService)
+  .factory('Id', IdService)
   ;
 
-
-
-
-function AppService(Api, Data, $q) {
-  var self = this;
-  this.requested_url = null;
-
+function AppService(Api, Data, $q, $log) {
+  var App = this;
   var _queries = {};
   var _commands = {};
   var _current = null;
 
-  this.registerQuery = function registerQuery(name, f) {
+  App.log = $log;
+
+  App.registerQuery = function registerQuery(name, f) {
     if (_queries[name])
       throw new Error('query `' + name + '` already defined');
     _queries[name] = f;
   }
 
-  var commandProto = {
-    isValid: function isValid(data) {
-      return true;
-    },
-  }
-
-  this.registerCommand = function registerCommand(name, f) {
+  App.registerCommand = function registerCommand(name, f) {
     if (_commands[name])
       throw new Error('command `' + name + '` already defined');
-    f.prototype = commandProto;
     _commands[name] = f;
   }
 
-  this.getQuery = function getQuery(name) {
-    return new _queries[name];
+  App.getQuery = function getQuery(name, args) {
+    App.deinitCommand();
+    var q = new _queries[name](args);
+    q.app = App;
+    if (q.promise)
+      return q.promise.then(function (discarded) {
+        delete q.promise;
+        return q;
+      });
+    else
+      return $q.resolve(q);
   }
 
-  this.initCommand = function initCommand(name) {
-    _current = new _commands[name];
+  App.initCommand = function initCommand(name) {
+    var Cls = _commands[name],
+        args = Array.prototype.slice.call(arguments);
+    // `new` with dynamic args: http://stackoverflow.com/a/8843181/297361
+    _current = new (Function.prototype.bind.apply(Cls, args));
     _current.command_name = name;
     return _current;
   }
 
-  this.getCurrent = function getCurrent() {
+  App.deinitCommand = function deinitCommand() {
+    _current = null;
+  }
+
+  App.getCurrent = function getCurrent() {
     return _current;
   }
 
-  /*
-  this.deinitCommand = function deinitCommand() {
-    _current = null;
-  }
-  */
-
-  this.authenticate = function authenticate(args) {
+  App.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
       if (result)
-        return Data.set('session', result);
+        return Data.put({_id: '_local/session', result: result});
       else
         return $q.reject({message: 'Login failed'});
     });
   }
 
-  this.getSession = function getSession(url) {
-    if (url)
-      this.requested_url = url;
-    return Data.get('session');
+  App.getSession = function getSession() {
+    return Data.get('_local/session');
   }
 
 }
@@ -228,31 +249,95 @@ function ApiService($http, $q) {
     }
     function fail(rsp) {
       var data = rsp.data;
-      return $q.reject(data && data.error ? data.error : {'message': 'Network error'});
+      return $q.reject(data && data.error
+                        ? data.error
+                        : {'message': 'Network error'});
     }
   }
 
 }
 
 
-function DataService($window, $q) {
-  var LF = $window.localforage;
-  this.get = function getItem(key) {
-    return LF.getItem(key);
-  }
-
-  this.set = function setItem(key, value) {
-    return LF.setItem(key, value);
-  }
-
+// istanbul ignore next
+function DataService(pouchDB) {
+  return pouchDB('carenet');
 }
+
+
+// istanbul ignore next
+function IdService() {
+  return next;
+  function next() {
+    return Date.now();
+  }
+}
+
+
+angular.module('registration', ['core'])
+  .run(registration);
+
+function registration(App, Data, Id, $rootScope, $log) {
+
+  App.registerCommand('login', function (url) {
+    this.start = 'form/login';
+    this.isValid = function (data) {
+      return !!(data.username && data.password)
+    }
+    this.next = function (data) {
+      return App.authenticate(data).then(function ok(s) {
+        return url;
+      });
+    }
+  })
+
+  App.registerQuery('main', function () {
+    this.message = 'Hello';
+  })
+
+  App.registerQuery('list-records', function () {
+    var self = this;
+    self.records = [];
+    self.promise =
+      Data.allDocs({include_docs:true})
+        .then(function (rsp) {
+          if (rsp.total_rows)
+            self.records = rsp.rows;
+        });
+  })
+
+  App.registerCommand('new-record', function () {
+    this.start = 'form/new-record';
+    this.isValid = function (data) {
+      var age = parseInt(data.age);
+      return data.name && age > 0 && age < 150;
+    }
+    this.next = function (data) {
+      data._id = 'ptr:' + Id();
+      return Data.put(data)
+        .then(function (rec) {
+            return 'view/record/' + data._id;
+        })
+    }
+  })
+
+  App.registerQuery('record', function (args) {
+    var self = this;
+    self.id = args[0];
+    self.promise =
+      Data.get(args[0])
+        .then(function (rec) {
+          self.record = rec;
+        })
+  })
+}
+
 
 
 
 angular.module('util', [])
   .directive('autofocus', AutofocusDirective)
   .directive('removeOnLoad', RemoveOnLoadDirective)
-
+  ;
 
 function RemoveOnLoadDirective() {
   return {

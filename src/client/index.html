@@ -153,7 +153,7 @@ var timelog = (function () {
 
 (function () {
 
-  function loadAssets(css, js, done) {
+  function insertAssets(css, js, done) {
 
     next();
 
@@ -350,17 +350,16 @@ var timelog = (function () {
     }
 
     function onReady() {
-      loadAssets(config.css, config.js, done);
+      insertAssets(config.css, config.js, bootstrapAngular);
     }
 
-    function done() {
+    function bootstrapAngular() {
       var deps = ['init'].concat(config.deps || []);
       angular.module('__main__', deps);
       angular.bootstrap(document, ['__main__'], {strictDi: !config.devel});
     }
 
     function notifyUpdate() {
-      timelog('NOTIFY UPDATE');
       if (config.onappcacheupdate)
         config.onappcacheupdate();
     }

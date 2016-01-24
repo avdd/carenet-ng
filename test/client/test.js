@@ -10,10 +10,28 @@ beforeEach(function () {
 function FakeData($q) {
   var data = {};
   this.get = function (key) {
-    return $q(function (resolve) { resolve(data[key]) });
+    return $q(function (resolve, reject) {
+      var x = data[key];
+      if (x === undefined)
+        reject({status:404});
+      else
+        resolve(x);
+    });
   }
-  this.set = function (key, value) {
-    return $q(function (resolve) { data[key] = value; resolve(value) });
+  this.put = function (value) {
+    var key = value._id;
+    data[key] = value;
+    return $q.resolve(value);
+  }
+
+  this.allDocs = function (args) {
+    return $q(function (resolve, reject) {
+      var rows = [];
+      var k;
+      for (k in data)
+        rows.push(data[k]);
+      return resolve({rows: rows, total_rows: rows.length});
+    });
   }
 }
 
@@ -73,7 +91,6 @@ describe('util', function () {
     });
   });
 
-
   describe('AutofocusDirective', function () {
 
     beforeEach(Inject('$timeout', '$compile', '$rootScope'));
@@ -90,9 +107,292 @@ describe('util', function () {
 });
 
 
+describe('routing', function () {
+
+  beforeEach(module('routing'));
+
+  beforeEach(module(function ($provide) {
+    $provide.service('App', FakeApp);
+  }));
+
+  function FakeApp() {
+    this.getQuery = function () {}
+    this.initCommand = function () {}
+    this.getCurrent = function () {}
+    this.getSession = function () {
+      return _.q.resolve('dummy session');
+    }
+  }
+
+  describe('RouteConfig', function () {
+
+    beforeEach(Inject('App', '$location', '$httpBackend', '$q',
+                      // must be injected:
+                      '$route'));
+
+    afterEach(function () {
+      _.httpBackend.verifyNoOutstandingExpectation();
+      _.httpBackend.verifyNoOutstandingRequest();
+    })
+
+    it('redirects to login with no session', function () {
+      spyOn(_.App, 'getSession').and.callFake(function () {
+        return _.q.reject();
+      });
+      spyOn(_.App, 'initCommand').and.callFake(function () {
+        return {start: 'form/login'};
+      });
+      spyOn(_.App, 'getCurrent').and.callFake(function () {
+        return {command_name: 'login'}
+      });
+      _.httpBackend.expectGET('templates/view/hello.html').respond(200);
+      _.httpBackend.expectGET('templates/form/login.html').respond(200);
+      _.location.path('/view/hello');
+      _.httpBackend.flush();
+      expect(_.location.url()).toEqual('/form/login');
+    });
+
+    it('doesn\'t redirect if logged in', function () {
+      spyOn(_.App, 'getQuery').and.callFake(function () {
+        return true;
+      });
+      _.httpBackend.expectGET('templates/view/hello.html').respond(200);
+      _.location.path('/view/hello');
+      _.httpBackend.flush();
+      expect(_.location.url()).toEqual('/view/hello');
+    });
+
+    it('shows error when query fails', function () {
+      spyOn(_.App, 'getQuery').and.callFake(function () {
+        return _.q.reject({message: 'testing'});
+      });
+      _.httpBackend.expectGET('templates/view/hello.html').respond(200);
+      _.httpBackend.expectGET('templates/error.html').respond(200);
+      _.location.path('/view/hello');
+      _.httpBackend.flush();
+      expect(_.location.url()).toEqual('/error');
+    });
+
+    it('shows error with uninitialised command', function () {
+      _.httpBackend.expectGET('templates/form/hello.html').respond(200);
+      _.httpBackend.expectGET('templates/error.html').respond(200);
+      _.location.path('/form/hello');
+      _.httpBackend.flush();
+      expect(_.location.url()).toEqual('/error');
+    });
+  });
+
+  describe('ErrorCtrl', function () {
+
+    beforeEach(Inject('App', '$controller', '$window', '$location', '$rootScope'));
+
+    it('goes home if not loaded', function () {
+      var ctrl = _.controller('ErrorCtrl');
+      expect(ctrl.label).toEqual('Go home');
+      _.rootScope.$apply(ctrl.go);
+      expect(_.location.path()).toBe('/view/main');
+    });
+
+    it('goes back if loaded', function () {
+      _.App.loaded = true;
+      var ctrl = _.controller('ErrorCtrl');
+      expect(ctrl.label).toEqual('Go back');
+      var goArg = false;
+      spyOn(_.window.history, 'go').and.callFake(function (arg) {
+        goArg = arg;
+      });
+      _.rootScope.$apply(ctrl.go);
+      expect(goArg).toBe(-1);
+    });
+  });
+
+
+  describe('ViewCtrl', function () {
+
+    beforeEach(Inject('App', '$controller', '$rootScope', '$location'));
+
+    it('has query', function () {
+      var ctrl = _.controller('ViewCtrl', {query: 'XXX'});
+      expect(ctrl.query).toEqual('XXX');
+    });
+
+    it('calls command', function () {
+      spyOn(_.App, 'initCommand').and.callFake(function () {
+        return {start: 'go/here'};
+      });
+      var ctrl = _.controller('ViewCtrl', {query: {app: _.App}});
+      ctrl.initCommand('foo');
+      _.rootScope.$apply();
+      expect(_.location.path()).toBe('/go/here');
+    });
+
+  });
+
+
+  describe('FormCtrl', function () {
+
+    beforeEach(Inject('$controller', '$rootScope', '$q'));
+
+    function getForm(name, cmd) {
+      return _.controller('FormCtrl', {command: cmd});
+    }
+
+    it('is submittable when valid', function () {
+      var called = false;
+      var ctrl = getForm('hello', {
+        isValid: function (x) {
+          called = true;
+          return x.value == 1;
+        }
+      });
+      expect(ctrl.form.submittable).toBe(false);
+      ctrl.changed();
+      expect(called).toBe(true);
+      expect(ctrl.form.submittable).toBe(false);
+      ctrl.form.data = {value: 1};
+      ctrl.changed();
+      expect(ctrl.form.submittable).toBe(true);
+    });
+
+    it('calls command with form data', function () {
+      var called = {};
+      var ctrl = getForm('hello', {
+        next: function (data) {
+          called.data = data;
+        }
+      });
+      ctrl.form.data = {foo:'foo'};
+      _.rootScope.$apply(ctrl.submit);
+      expect(called.data).toEqual({foo:'foo'});
+    });
+
+    it('has message on failure', function () {
+      var ctrl = getForm('hello', {
+        next: function () {
+          return _.q.reject({message: 'the failz'});
+        }
+      });
+      expect(ctrl.form.message).toBeNull();
+      _.rootScope.$apply(ctrl.submit);
+      expect(ctrl.form.message).toEqual('the failz');
+    });
+
+    it('has unknown message on empty error', function () {
+      var ctrl = getForm('hello', {
+        next: function () {
+          return _.q.reject();
+        }
+      });
+      expect(ctrl.form.message).toBeNull();
+      _.rootScope.$apply(ctrl.submit);
+      expect(ctrl.form.message).toEqual('Unknown error');
+    });
+  });
+
+});
+
+
 describe('core', function () {
 
   beforeEach(module('core'));
+
+  beforeEach(module(function ($provide) {
+    $provide.service('Data', FakeData);
+  }));
+
+
+  describe('registration', function () {
+    beforeEach(Inject('App', '$q', '$rootScope'));
+
+    it('fails with duplicate query', function () {
+      function fails() {
+        _.App.registerQuery('hello', function () {});
+        _.App.registerQuery('hello', function () {});
+      }
+      expect(fails).toThrow();
+    });
+
+    it('fails with duplicate command', function () {
+      function fails() {
+        _.App.registerCommand('hello', function () {});
+        _.App.registerCommand('hello', function () {});
+      }
+      expect(fails).toThrow();
+    });
+
+    it('returns query as promise', function () {
+      _.App.registerQuery('hello', function () {});
+      var p = _.App.getQuery('hello');
+      expect(p.then).toBeDefined();
+    });
+
+    it('creates query', function () {
+      function Hello() {}
+      _.App.registerQuery('hello', Hello);
+      _.App.getQuery('hello').then(function (q) {
+        expect(q instanceof Hello).toBe(true);
+      });
+    });
+
+    it('creates query via promise', function () {
+      var called = false;
+      function Hello() {
+        this.promise = {
+          then: function (handler) {
+            called = true;
+            return _.q.resolve(handler());
+          }
+        }
+      }
+      _.App.registerQuery('hello', Hello);
+      _.App.getQuery('hello')
+        .then(function (q) {
+          expect(q instanceof Hello).toBe(true);
+          expect(called).toBe(true);
+        })
+        .catch(function (e) {
+          fail('unexpected failure');
+        });
+      _.rootScope.$apply();
+    });
+
+    it('cancels query on rejected promise', function () {
+      function Hello() {
+        this.promise = _.q.reject('whoops');
+      }
+      _.App.registerQuery('hello', Hello);
+      _.App.getQuery('hello')
+        .then(function (q) {
+          fail('expected failure');
+        })
+        .catch(function (e) {
+          expect(e).toBe('whoops');
+        });
+      _.rootScope.$apply();
+    });
+
+    it('inits command', function () {
+      function Hello(x, y) {
+        this.args = [x, y]
+      }
+      _.App.registerCommand('hello', Hello);
+      _.App.initCommand('hello', 1, 'two');
+      var cmd = _.App.getCurrent();
+      expect(cmd instanceof Hello).toBe(true);
+      expect(cmd.args).toEqual([1, 'two']);
+    });
+
+    it('deinits command on query', function () {
+      _.App.registerCommand('foo', function () {});
+      _.App.registerQuery('bar', function () {});
+      _.App.initCommand('foo');
+      expect(_.App.getCurrent()).toBeDefined();
+      _.App.getQuery('bar').then(function (q) {
+        expect(_.App.getCurrent()).toBeFalsy();
+      });
+    });
+  });
+
 
   describe('ApiService', function () {
 
@@ -170,10 +470,6 @@ describe('core', function () {
 
   describe('App.authenticate', function () {
 
-    beforeEach(module(function ($provide) {
-      $provide.service('Data', FakeData);
-    }));
-
     beforeEach(Inject('App', 'Api', '$q', '$rootScope'));
 
     it('handles success', function () {
@@ -215,198 +511,31 @@ describe('core', function () {
         .catch(function (e) { fail('Unexpected failure') });
     });
   });
+
 });
 
+describe('registration', function () {
 
-describe('init', function () {
+  beforeEach(module('registration'));
 
-  beforeEach(module('init'));
   beforeEach(module(function ($provide) {
     $provide.service('Data', FakeData);
   }));
 
-  describe('RouteConfig', function () {
-
-    beforeEach(Inject('App', 'Data', '$location', '$rootScope', '$httpBackend', '$route'));
-
-    afterEach(function () {
-      _.httpBackend.verifyNoOutstandingExpectation();
-      _.httpBackend.verifyNoOutstandingRequest();
-    })
-
-    afterEach(function () {
-      // _.App.deinitCommand();
-    });
-
-    it('redirects to login', function () {
-      _.httpBackend.expectGET('templates/view/main.html').respond(200);
-      _.httpBackend.expectGET('templates/form/login.html').respond(200);
-      _.location.path('/view/main');
-      _.httpBackend.flush();
-      expect(_.location.url()).toEqual('/form/login');
-    });
-
-    /*
-    xit('login redirects if logged in', function () {
-      Inject('App');
-      _.App.setSession(true);
-      _.App.initCommand('login');
-      _.httpBackend.expectGET('templates/form/login.html').respond(200);
-      _.httpBackend.expectGET('templates/view/main.html').respond(200);
-      _.location.path('/form/login');
-      _.httpBackend.flush();
-      expect(_.location.url()).toEqual('/view/main');
-    });
-    */
-
-    it('doesn\'t redirect if logged in', function () {
-      _.Data.set('session', true);
-      _.httpBackend.expectGET('templates/view/main.html').respond(200);
-      _.location.path('/view/main');
-      _.httpBackend.flush();
-      expect(_.location.url()).toEqual('/view/main');
-    });
-
-    it('redirects with uninitialised command', function () {
-      _.Data.set('session', true);
-      _.httpBackend.expectGET('templates/form/hello.html').respond(200);
-      _.httpBackend.expectGET('templates/view/main.html').respond(200);
-      _.App.registerCommand('hello', function () {});
-      _.location.path('/form/hello');
-      _.httpBackend.flush();
-      expect(_.location.url()).toEqual('/view/main');
-    });
-
-  });
+  beforeEach(module(function ($provide) {
+    $provide.service('Id', FakeId);
+  }));
 
 
-  describe('App.cqrs', function () {
-    beforeEach(Inject('App'));
-    it('fails registering query with same name', function () {
-      function fails() {
-        _.App.registerQuery('hello', function () {});
-        _.App.registerQuery('hello', function () {});
-      }
-      expect(fails).toThrow();
-    });
-    it('fails registering command with same name', function () {
-      function fails() {
-        _.App.registerCommand('hello', function () {});
-        _.App.registerCommand('hello', function () {});
-      }
-      expect(fails).toThrow();
-    });
-  });
+  var idSequence = -1;
 
+  function FakeId() {
+    return function () {return idSequence++; }
+  }
 
-  describe('ViewCtrl', function () {
-
-    beforeEach(Inject('App', '$controller', '$routeParams'))
-
-    it('says hello', function () {
-      _.App.registerQuery('hello', function () {
-        this.message = 'Hello!';
-      });
-      _.routeParams.name = 'hello';
-      var ctrl = _.controller('ViewCtrl');
-      expect(ctrl.query.message).toEqual('Hello!');
-    });
-  });
-
-
-  describe('FormCtrl', function () {
-
-    beforeEach(Inject('App', '$controller', '$routeParams', '$rootScope', '$q'));
-
-    function getForm(name, f) {
-      _.App.registerCommand(name, f);
-      _.App.initCommand(name);
-      _.routeParams.name = name;
-      return _.controller('FormCtrl');
-    }
-
-    it('basic command', function () {
-      function dummy() {}
-      var ctrl = getForm('hello', dummy);
-      expect(ctrl.form.submittable).toBe(false);
-      ctrl.changed();
-      expect(ctrl.form.submittable).toBe(true);
-    });
-
-    it('is submittable when valid', function () {
-      var called = false;
-      function command() {
-        this.isValid = function (x) {
-          called = true;
-          return x.value == 1;
-        }
-      }
-      var ctrl = getForm('hello', command);
-      expect(ctrl.form.submittable).toBe(false);
-      ctrl.changed();
-      expect(called).toBe(true);
-      expect(ctrl.form.submittable).toBe(false);
-      ctrl.form.data = {value: 1};
-      ctrl.changed();
-      expect(ctrl.form.submittable).toBe(true);
-    });
-
-    it('calls command on submit', function () {
-      var called = false;
-      function command() {
-        this.next = function () {
-          called = true;
-        }
-      }
-      getForm('hello', command).submit();
-      _.rootScope.$apply();
-      expect(called).toBe(true);
-    });
-
-    it('calls command with form data', function () {
-      var called = {};
-      function command() {
-        this.next = function (data) {
-          called.data = data;
-        }
-      }
-      var ctrl = getForm('hello', command)
-      ctrl.form.data = {foo:'foo'};
-      ctrl.submit();
-      _.rootScope.$apply();
-      expect(called.data).toEqual({foo:'foo'});
-    });
-
-    it('has message on failure', function () {
-      function command() {
-        this.next = function (App, x) {
-          return _.q.reject({message: 'the failz'});
-        }
-      }
-      var ctrl = getForm('hello', command);
-      expect(ctrl.form.message).toBeNull();
-      ctrl.submit();
-      _.rootScope.$apply();
-      expect(ctrl.form.message).toEqual('the failz');
-    });
-
-    it('has unknown message on empty error', function () {
-      function command() {
-        this.next = function (App, x) {
-          return _.q.reject();
-        }
-      }
-      var ctrl = getForm('hello', command);
-      expect(ctrl.form.message).toBeNull();
-      ctrl.submit();
-      _.rootScope.$apply();
-      expect(ctrl.form.message).toEqual('Unknown error');
-    });
-  });
+  beforeEach(Inject('App', '$q', '$rootScope'));
 
   describe('Login command', function () {
-
-    beforeEach(Inject('App', '$q', '$rootScope'));
 
     it('is invalid with no user or password', function () {
       var cmd = _.App.initCommand('login');
@@ -433,8 +562,7 @@ describe('init', function () {
       spyOn(_.App, 'authenticate').and.callFake(function () {
         return _.q.resolve({result: true});
       });
-      _.App.requested_url = 'go/here';
-      _.App.initCommand('login')
+      _.App.initCommand('login', 'go/here')
         .next()
         .then(function (r) { expect(r).toBe('go/here') })
         .catch(function (e) { fail('unexpected failure') })
@@ -442,53 +570,103 @@ describe('init', function () {
     });
   });
 
+
   describe('Main query', function () {
     it('says hello', function () {
-      Inject('App');
-      var q = _.App.getQuery('main');
-      expect(q.message).toBe('Hello');
+      _.App.getQuery('main').then(function (q) {
+        expect(q.message).toBe('Hello');
+      });
+    });
+  });
+
+
+  describe('list-records', function () {
+    it('is empty', function () {
+      _.App.getQuery('list-records').then(function (q) {
+        expect(q.records.length).toBe(0);
+      });
+      _.rootScope.$apply();
+    });
+
+    it('is not empty', function () {
+      Inject('Data');
+      _.Data.put({_id: 'foo', name: 'bar'});
+      _.App.getQuery('list-records').then(function (q) {
+        expect(q.records.length).toBe(1);
+        expect(q.records[0].name).toBe('bar');
+      });
+      _.rootScope.$apply();
+    });
+  });
+
+  describe('new-record', function () {
+    it('validates', function () {
+      var cmd = _.App.initCommand('new-record');
+      expect(cmd.start).toBeDefined();
+      function bad(data) {
+        expect(cmd.isValid(data)).toBeFalsy();
+      }
+      function good(data) {
+        expect(cmd.isValid(data)).toBeTruthy();
+      }
+      bad({});
+      bad({name:'x'});
+      bad({age: 'nine'});
+      good({name: 'yes', age: '10'});
+    });
+
+    it('saves a record', function () {
+      Inject('Data');
+      var record = {name:'gary', age: 99};
+      idSequence = 1234
+      _.App.initCommand('new-record')
+        .next(record)
+        .then(function (result) {
+          expect(result).toBe('view/record/ptr:1234');
+          return _.Data.get('ptr:1234');
+        })
+        .then(function (rec) {
+          expect(rec).toEqual({
+            _id: 'ptr:1234',
+            name:'gary',
+            age: 99
+          });
+        })
+        .catch(function (e) {
+          fail('unexpected failure');
+        });
+      _.rootScope.$apply();
+    });
+  });
+
+  describe('view-record', function () {
+    it('fails when not found', function () {
+      _.App.getQuery('record', ['ptr:1234'])
+        .then(function (q) {
+          fail('expected failure');
+        })
+        .catch(function (e) {
+          expect(e.status).toEqual(404);
+        });
+      _.rootScope.$apply();
+    });
+
+    it('gets a saved record', function () {
+      Inject('Data');
+      _.Data.put({_id: 'blah-blah', name: 'barry'});
+      _.App.getQuery('record', ['blah-blah'])
+        .then(function (q) {
+          expect(q.record).toEqual({
+            _id: 'blah-blah',
+            name: 'barry'
+          });
+        })
+        .catch(function (q) {
+          fail('unexpected failure');
+        });
+      _.rootScope.$apply();
     });
   });
 
 });
-
-
-describe('Data', function () {
-  beforeEach(module('core'));
-  beforeEach(Inject('$window', 'Data'));
-
-  it('calls localforage.getItem', function () {
-    spyOn(_.window.localforage, 'getItem').and.callFake(function (key) {
-      return 'result';
-    });
-    expect(_.Data.get('foo')).toEqual('result');
-  });
-  it('calls localforage.setItem', function () {
-    spyOn(_.window.localforage, 'setItem').and.callFake(function (key) {
-      return 'result';
-    });
-    expect(_.Data.set('foo', 'x')).toEqual('result');
-  });
-});
-
-
-describe('localforage', function () {
-  beforeEach(Inject('$window'));
-  it('works', function () {
-    var LF = _.window.localforage;
-    LF.setItem('foo', 'bar')
-      .then(function (r) { expect(r).toEqual('bar') })
-      .catch(function (e) { fail('unexpected failure') })
-    LF.length()
-      .then(function (r) { expect(r).toEqual(1) })
-      .catch(function (e) { fail('unexpected failure') })
-    LF.keys()
-      .then(function (r) { expect(r).toEqual(['foo']) })
-      .catch(function (e) { fail('unexpected failure') })
-    LF.getItem('foo')
-      .then(function (r) { expect(r).toEqual('bar') })
-      .catch(function (e) { fail('unexpected failure') })
-  });
-});
-
 

@@ -1,0 +1,113 @@
+
+<div class="x-modal">
+  <div class="x-modal-dialog" style=max-width:600px>
+    <div class="modal-content">
+
+      <div class="modal-header">
+          <div class=row>
+            <div class="col-xs-10 col-xs-offset-1">
+              <h4>
+                new record
+              </h4>
+            </div>
+          </div>
+      </div>
+
+      <div class="modal-body">
+        <form name=form
+              novalidate
+              autocomplete=off
+              ng-submit="self.submit()">
+
+          <div class="row checklist-item">
+
+            <div class="col-xs-1 checklist-indicator control-label">
+            </div>
+
+            <div class="col-xs-10 col-sm-10">
+
+              <div class=row>
+
+                <label class="control-label col-{{self.form.break_code}}-3">
+                  <span>name</span>
+                </label>
+
+                <div class="col-{{self.form.break_code}}-9">
+                  <input class="form-control"
+                         tabindex=1
+                         autofocus
+                         ng-model="self.form.data.name"
+                         ng-change="self.changed()"
+                         ng-minlength="2" >
+
+                </div>
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+
+          </div>
+
+          <hr>
+
+          <div class="row checklist-item">
+
+            <div class="col-xs-1 checklist-indicator control-label">
+            </div>
+
+            <div class="col-xs-10 col-sm-10">
+
+              <div class=row>
+
+                <label class="control-label col-{{self.form.break_code}}-3">
+                  <span>age</span>
+                </label>
+
+                <div class="col-{{self.form.break_code}}-9">
+                  <input class="form-control"
+                         tabindex=2
+                         ng-model="self.form.data.age"
+                         ng-change="self.changed()"
+                         ng-minlength="1" >
+
+                </div>
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+
+          </div>
+
+          <hr>
+
+          <div class="row">
+
+            <div class="col-xs-10 col-xs-offset-1">
+              <div class=row>
+                <div class="col-{{self.form.break_code}}-12
+                            col-{{self.form.break_code}}-offset-3">
+                  <div class=row>
+                    <div class="col-xs-4 col-sm-3">
+
+                      <button class="btn btn-xblock btn-primary"
+                              tabindex=1000
+                              ng-disabled="!self.form.submittable"
+                              >
+                          Add record
+                        </button>
+                    </div>
+
+                    <div class="col-xs-8 col-sm-7">
+                        <p class="validation-message"
+                            ng-bind="self.form.message"
+                            ng-show="self.form.message">
+                    </div>
+                  </div> <!-- /row -->
+                </div>
+              </div> <!-- /row -->
+            </div> <!-- /col -->
+          </div> <!-- /row -->
+
+        </form>
+      </div> <!-- /modal-body -->
+    </div> <!-- /modal-content -->
+  </div> <!-- /modal-dialog -->
+</div> <!-- /modal-->
+
+
