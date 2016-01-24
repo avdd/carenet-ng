@@ -75,7 +75,7 @@ xdescribe('environment', function () {
 });
 
 
-describe('clean session', function () {
+fdescribe('clean session', function () {
   it('redirects to login', function () {
     get('view/main');
     expectUrl('form/login');
