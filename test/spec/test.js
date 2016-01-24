@@ -34,7 +34,7 @@ afterEach(function () {
 browser.get('/');
 
 
-describe('clean session', function () {
+xdescribe('clean session', function () {
   it('redirects to login', function () {
     get('view/main');
     expectUrl('form/login');
