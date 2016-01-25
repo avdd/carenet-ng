@@ -520,17 +520,12 @@ describe('registration', function () {
 
   beforeEach(module(function ($provide) {
     $provide.service('Data', FakeData);
+    $provide.constant('Id', FakeId);
   }));
 
-  beforeEach(module(function ($provide) {
-    $provide.service('Id', FakeId);
-  }));
-
-
-  var idSequence = -1;
-
+  var FAKEID = 1;
   function FakeId() {
-    return function () {return idSequence++; }
+    return FAKEID;
   }
 
   beforeEach(Inject('App', '$q', '$rootScope'));
@@ -618,7 +613,7 @@ describe('registration', function () {
     it('saves a record', function () {
       Inject('Data');
       var record = {name:'gary', age: 99};
-      idSequence = 1234
+      FAKEID = 1234
       _.App.initCommand('new-record')
         .next(record)
         .then(function (result) {
