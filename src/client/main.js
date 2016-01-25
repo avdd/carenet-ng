@@ -280,7 +280,7 @@ function IdService() {
 angular.module('registration', ['core'])
   .run(registration);
 
-function registration(App, Data, Id, $rootScope, $log) {
+function registration(App, Data, Id) {
 
   App.registerCommand('login', function (url) {
     this.isValid = function (data) {
