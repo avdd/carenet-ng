@@ -1,6 +1,8 @@
 
 function get(path) {
-  return browser.setLocation(path);
+  return browser.setLocation(path).then(function () {
+    return browser.sleep(1000);
+  });
 }
 
 function getUrl() {
@@ -34,7 +36,23 @@ afterEach(function () {
 browser.get('/');
 
 
-xdescribe('clean session', function () {
+describe('environment', function () {
+  function pouchInfo() {
+    var cb = arguments[arguments.length-1];
+    var db = new PouchDB('carenet')
+    db.info().then(cb);
+  }
+  it('starts clean', function () {
+    browser.executeAsyncScript(pouchInfo)
+      .then(function (rsp) {
+        expect(rsp.doc_count).toBe(0);
+        expect(rsp.update_seq).toBe(0);
+      });
+  });
+});
+
+
+describe('clean session', function () {
   it('redirects to login', function () {
     get('view/main');
     expectUrl('form/login');
