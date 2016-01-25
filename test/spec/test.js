@@ -1,10 +1,10 @@
 
+var SLEEP_MS = 0;
+if (browser.params.sleep)
+  SLEEP_MS = 1000;
+
 function get(path) {
-  var sleep_ms = 1000;
-  return browser.setLocation(path).then(function () {
-    if (browser.params.sleep)
-      return browser.sleep(sleep_ms);
-  });
+  return browser.setLocation(path)
 }
 
 function getUrl() {
@@ -12,7 +12,13 @@ function getUrl() {
 }
 
 function expectUrl(x) {
-  expect(getUrl()).toMatch(x);
+  function check() {
+    return expect(getUrl()).toMatch(x);
+  }
+  if (SLEEP_MS)
+    return browser.sleep(SLEEP_MS).then(check)
+  else
+    return check();
 }
 
 function expectUrlNot(x) {
