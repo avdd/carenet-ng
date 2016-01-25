@@ -70,7 +70,8 @@ function routeConfig($routeProvider) {
     "ngInject"
     var params = $route.current.params
     var args = (params.args || '').split('/');
-    return App.getQuery(params.name, args)
+    args.unshift(params.name);
+    return App.getQuery.apply(null, args);
   }
 
   function getCommand(App, $q, $route) {
@@ -191,7 +192,10 @@ function AppService(Api, Data, $q, $log) {
 
   App.getQuery = function getQuery(name, args) {
     App.deinitCommand();
-    var q = new _queries[name](args);
+    var Cls = _queries[name],
+        args = Array.prototype.slice.call(arguments);
+    // `new` with dynamic args: http://stackoverflow.com/a/8843181/297361
+    var q = new (Function.prototype.bind.apply(Cls, args));
     q.app = App;
     if (q.promise)
       return q.promise.then(function (discarded) {
@@ -320,11 +324,12 @@ function registration(App, Data, Id, $rootScope, $log) {
     }
   })
 
-  App.registerQuery('record', function (args) {
+  App.registerQuery('record', function (id) {
     var self = this;
-    self.id = args[0];
+    console.log(id);
+    self.id = id;
     self.promise =
-      Data.get(args[0])
+      Data.get(id)
         .then(function (rec) {
           self.record = rec;
         })
