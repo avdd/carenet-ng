@@ -62,7 +62,7 @@ function routeConfig($routeProvider) {
       })
       .catch(function (e) {
         var cmd = App.initCommand('login', $location.url());
-        return $q.reject({url: cmd.start});
+        return $q.reject({url: 'form/' + cmd.command_name});
       })
   }
 
@@ -124,7 +124,7 @@ function ViewCtrl(query, $routeParams, $location) {
 
   self.initCommand = function () {
     var cmd = query.app.initCommand.apply(null, arguments);
-    $location.path(cmd.start);
+    $location.path('form/' + cmd.command_name);
   }
 
 }
@@ -283,7 +283,6 @@ angular.module('registration', ['core'])
 function registration(App, Data, Id, $rootScope, $log) {
 
   App.registerCommand('login', function (url) {
-    this.start = 'form/login';
     this.isValid = function (data) {
       return !!(data.username && data.password)
     }
@@ -310,7 +309,6 @@ function registration(App, Data, Id, $rootScope, $log) {
   })
 
   App.registerCommand('new-record', function () {
-    this.start = 'form/new-record';
     this.isValid = function (data) {
       var age = parseInt(data.age);
       return data.name && age > 0 && age < 150;

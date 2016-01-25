@@ -140,7 +140,7 @@ describe('routing', function () {
         return _.q.reject();
       });
       spyOn(_.App, 'initCommand').and.callFake(function () {
-        return {start: 'form/login'};
+        return {command_name: 'login'};
       });
       spyOn(_.App, 'getCurrent').and.callFake(function () {
         return {command_name: 'login'}
@@ -218,12 +218,12 @@ describe('routing', function () {
 
     it('calls command', function () {
       spyOn(_.App, 'initCommand').and.callFake(function () {
-        return {start: 'go/here'};
+        return {command_name: 'foo'};
       });
       var ctrl = _.controller('ViewCtrl', {query: {app: _.App}});
       ctrl.initCommand('foo');
       _.rootScope.$apply();
-      expect(_.location.path()).toBe('/go/here');
+      expect(_.location.path()).toBe('/form/foo');
     });
 
   });
@@ -597,7 +597,7 @@ describe('registration', function () {
   describe('new-record', function () {
     it('validates', function () {
       var cmd = _.App.initCommand('new-record');
-      expect(cmd.start).toBeDefined();
+      expect(cmd.command_name).toBeDefined();
       function bad(data) {
         expect(cmd.isValid(data)).toBeFalsy();
       }
