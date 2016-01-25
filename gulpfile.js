@@ -136,10 +136,6 @@ function getConfig() {
 
   config.python_cgi = path.join(cp.python_env, 'bin', 'carenetctl');
 
-  config.test_browser = 'chrome';
-  if (process.env.TRAVIS)
-    config.test_browser = 'firefox';
-
   function buildDir() {
     var args = Array.prototype.slice.call(arguments);
     args.unshift(config.paths.build);
@@ -749,11 +745,19 @@ function runProtractor(tests, port, prefix) {
   // var jar = 'node_modules/protractor/selenium/selenium-server-standalone-2.45.0.jar';
   var url = 'http://localhost:' + port + (prefix || '/');
 
+  var browser = 'chrome',
+      sleep = '';
+  if (process.env.TRAVIS) {
+    browser = 'firefox';
+    sleep = true;
+  }
+
   var args = ['--baseUrl', url,
               '--directConnect', 'true',
               // '--browser.ignoreSynchronization', 'true',
               '--framework', 'jasmine2',
-              '--browser', config.test_browser,
+              '--browser', browser,
+              '--params.sleep', sleep,
               '--specs', tests.join(',')],
       q = Q.defer(),
       error = null;

@@ -1,7 +1,9 @@
 
 function get(path) {
+  var sleep_ms = 1000;
   return browser.setLocation(path).then(function () {
-    return browser.sleep(1000);
+    if (browser.params.sleep)
+      return browser.sleep(sleep_ms);
   });
 }
 
