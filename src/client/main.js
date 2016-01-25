@@ -326,8 +326,6 @@ function registration(App, Data, Id, $rootScope, $log) {
 
   App.registerQuery('record', function (id) {
     var self = this;
-    console.log(id);
-    self.id = id;
     self.promise =
       Data.get(id)
         .then(function (rec) {
