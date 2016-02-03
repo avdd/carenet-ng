@@ -101,6 +101,19 @@ describe('login', function () {
 
 });
 
+function createRecord(name, age) {
+  get('view/list-records');
+  element(by.buttonText('New record')).click();
+  expectUrl('form/new-record');
+  element(by.model('self.form.data.name')).sendKeys(name);
+  element(by.model('self.form.data.age')).sendKeys(''+age);
+  element(by.tagName('form')).submit();
+  expectUrl(/view\/record\/ptr:\d+/);
+  expect(element(by.binding('self.query.record.name')).getText())
+        .toContain(name);
+  expect(element(by.binding('self.query.record.age')).getText())
+        .toContain(''+age);
+}
 
 describe('main form sequence', function () {
   it('shows empty list', function () {
@@ -116,17 +129,15 @@ describe('main form sequence', function () {
   });
 
   it('saves a new record', function () {
-    get('view/list-records');
-    element(by.buttonText('New record')).click();
-    expectUrl('form/new-record');
-    element(by.model('self.form.data.name')).sendKeys('John Doe');
-    element(by.model('self.form.data.age')).sendKeys('99');
-    element(by.tagName('form')).submit();
-    expectUrl(/view\/record\/ptr:\d+/);
-    expect(element(by.binding('self.query.record.name')).getText()).toContain('John Doe');
+    var name = 'John Doe'
+    createRecord(name, 2);
+    var url = getUrl();
     browser.navigate().back();
     expectUrl('view/list-records');
-    expect(element(by.tagName('ul')).getText()) .toContain('John Doe');
+    expect(element(by.tagName('ul')).getText()) .toContain(name);
+    element(by.linkText(name)).click();
+    expectUrl(url);
   });
 
 });
+
