@@ -392,7 +392,7 @@ _do_check_deps() {
 _do_pydiff() {
   # ./build.sh pydiff | patch python-requires.txt
   pip=.cache/python/bin/pip
-  pattern='^(carenet-ng)=='
+  pattern='carenet-ng'
   diff -u $PYTHON_REQUIRES <( $pip freeze |egrep -v "$pattern" )
 }
 
