@@ -29,7 +29,6 @@ module.exports = function(config) {
     , app_js = prefixed(project.paths.client_src, project.files.client_js)
     , test_js = prefixed(project.paths.client_test, project.files.client_test)
     , files = [].concat(early_js, vendor_js, late_js, app_js, test_js)
-
     , coverage = {};
 
   coverage[app_js] = ['coverage'];
@@ -51,11 +50,6 @@ module.exports = function(config) {
 
     browsers: [
       'PhantomJS'
-      // Chrome
-      // ChromeCanary
-      // Firefox
-      // Opera
-      // PhantomJS
     ],
 
     plugins: [

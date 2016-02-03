@@ -382,8 +382,11 @@ _do_test_vagrant() {
 _do_check_deps() {
   echo python:
   .cache/python/bin/pip list -o -f .cache/wheelhouse
-  echo npm:
-  npm outdated
+  echo npm global:
+  npm -g outdated
+  echo npm local:
+  (cd $(readlink -f .cache) \
+    && npm outdated)
   echo bower:
   node_modules/.bin/bower list
 }
@@ -412,9 +415,10 @@ _do_update_bower_package() {
 _do_update_npm_package() {
   package=${1:-}
   test "$package" || { echo "require package arg"; exit 1; }
+  version=${2:-latest}
   # pasted+adapted from shell history
   (cd $(readlink -f .cache) \
-    && npm install --save $package@latest \
+    && npm install --save "$package@$version" \
     && node src/clean-shrinkwrap.js)
 
   for f in npm-shrinkwrap.json package.json
