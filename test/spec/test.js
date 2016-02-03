@@ -1,5 +1,5 @@
 
-var SLEEP_MS = 0;
+var SLEEP_MS = 1;
 if (browser.params.sleep)
   SLEEP_MS = 1000;
 
@@ -15,14 +15,7 @@ function expectUrl(x) {
   function check() {
     return expect(getUrl()).toMatch(x);
   }
-  if (SLEEP_MS)
-    return browser.sleep(SLEEP_MS).then(check)
-  else
-    return check();
-}
-
-function expectUrlNot(x) {
-  expect(getUrl()).not.toMatch(x);
+  return browser.sleep(SLEEP_MS).then(check)
 }
 
 function getLog(f) {
