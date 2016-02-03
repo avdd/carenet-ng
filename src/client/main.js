@@ -177,6 +177,8 @@ function AppService(Api, Data, $q, $log) {
   var _commands = {};
   var _current = null;
 
+  var SESSION_KEY = '_local/session';
+
   App.log = $log;
 
   App.registerQuery = function registerQuery(name, f) {
@@ -227,14 +229,17 @@ function AppService(Api, Data, $q, $log) {
   App.authenticate = function authenticate(args) {
     return Api.call('login', args).then(function (result) {
       if (result)
-        return Data.put({_id: '_local/session', result: result});
+        return Data.put({_id: SESSION_KEY, result: result});
       else
         return $q.reject({message: 'Login failed'});
     });
   }
 
   App.getSession = function getSession() {
-    return Data.get('_local/session');
+    return Data.get(SESSION_KEY)
+      .catch(function (e) {
+        return $q.reject({message: 'no session'});
+      });
   }
 
 }
