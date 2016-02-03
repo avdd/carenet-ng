@@ -62,7 +62,8 @@ function routeConfig($routeProvider) {
       })
       .catch(function (e) {
         var cmd = App.initCommand('login', $location.url());
-        return $q.reject({url: 'form/' + cmd.command_name});
+        return $q.reject({url: 'form/' + cmd.command_name,
+                          message: e.message});
       })
   }
 
@@ -98,7 +99,7 @@ function routeInit($rootScope, $location, $log) {
   $rootScope.version = CONFIG.channel + '-' + CONFIG.version;
 
   $rootScope.$on('$routeChangeError', function (ev, next, current, rej) {
-    $log.log('route error:', (rej.message || rej));
+    $log.info('route error: ' + rej.message);
     if (rej && rej.url)
       $location.path(rej.url).replace();
     else

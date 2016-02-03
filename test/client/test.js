@@ -137,7 +137,7 @@ describe('routing', function () {
 
     it('redirects to login with no session', function () {
       spyOn(_.App, 'getSession').and.callFake(function () {
-        return _.q.reject();
+        return _.q.reject({message:'missing'});
       });
       spyOn(_.App, 'initCommand').and.callFake(function () {
         return {command_name: 'login'};
