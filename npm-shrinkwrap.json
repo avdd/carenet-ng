@@ -160,7 +160,7 @@
       "version": "0.4.2"
     },
     "bower": {
-      "version": "1.7.1",
+      "version": "1.7.2",
       "dependencies": {
         "abbrev": {
           "version": "1.0.7"
@@ -266,7 +266,7 @@
               "version": "2.1.0"
             },
             "escape-string-regexp": {
-              "version": "1.0.3"
+              "version": "1.0.4"
             },
             "has-ansi": {
               "version": "2.0.0",
@@ -392,39 +392,13 @@
           "version": "1.0.3"
         },
         "fs-write-stream-atomic": {
-          "version": "1.0.7",
+          "version": "1.0.5",
           "dependencies": {
             "graceful-fs": {
               "version": "4.1.2"
             },
-            "iferr": {
-              "version": "0.1.5"
-            },
             "imurmurhash": {
               "version": "0.1.4"
-            },
-            "readable-stream": {
-              "version": "2.0.4",
-              "dependencies": {
-                "core-util-is": {
-                  "version": "1.0.2"
-                },
-                "inherits": {
-                  "version": "2.0.1"
-                },
-                "isarray": {
-                  "version": "0.0.1"
-                },
-                "process-nextick-args": {
-                  "version": "1.0.6"
-                },
-                "string_decoder": {
-                  "version": "0.10.31"
-                },
-                "util-deprecate": {
-                  "version": "1.0.2"
-                }
-              }
             }
           }
         },
@@ -562,7 +536,7 @@
                       "version": "1.1.1"
                     },
                     "onetime": {
-                      "version": "1.0.0"
+                      "version": "1.1.0"
                     }
                   }
                 }
@@ -722,7 +696,7 @@
           "version": "2.7.3"
         },
         "md5-hex": {
-          "version": "1.1.0",
+          "version": "1.2.0",
           "dependencies": {
             "md5-o-matic": {
               "version": "0.1.1"
@@ -897,10 +871,10 @@
           "version": "0.6.1"
         },
         "rimraf": {
-          "version": "2.4.4",
+          "version": "2.5.0",
           "dependencies": {
             "glob": {
-              "version": "5.0.15",
+              "version": "6.0.3",
               "dependencies": {
                 "inflight": {
                   "version": "1.0.4",
@@ -968,7 +942,7 @@
           "version": "1.0.1"
         },
         "tar-fs": {
-          "version": "1.8.1",
+          "version": "1.9.0",
           "dependencies": {
             "pump": {
               "version": "1.0.1",
@@ -1006,7 +980,7 @@
                   }
                 },
                 "readable-stream": {
-                  "version": "2.0.4",
+                  "version": "2.0.5",
                   "dependencies": {
                     "core-util-is": {
                       "version": "1.0.2"
@@ -1095,7 +1069,7 @@
                   "version": "2.3.0",
                   "dependencies": {
                     "got": {
-                      "version": "5.2.0",
+                      "version": "5.3.0",
                       "dependencies": {
                         "create-error-class": {
                           "version": "2.0.1",
@@ -1125,7 +1099,7 @@
                               }
                             },
                             "readable-stream": {
-                              "version": "2.0.4",
+                              "version": "2.0.5",
                               "dependencies": {
                                 "core-util-is": {
                                   "version": "1.0.2"
@@ -1200,7 +1174,7 @@
                               }
                             },
                             "readable-stream": {
-                              "version": "2.0.4",
+                              "version": "2.0.5",
                               "dependencies": {
                                 "core-util-is": {
                                   "version": "1.0.2"
@@ -1241,7 +1215,7 @@
                       }
                     },
                     "rc": {
-                      "version": "1.1.5",
+                      "version": "1.1.6",
                       "dependencies": {
                         "deep-extend": {
                           "version": "0.4.0"
@@ -1307,7 +1281,7 @@
           "version": "1.1.1"
         },
         "which": {
-          "version": "1.2.0",
+          "version": "1.2.1",
           "dependencies": {
             "is-absolute": {
               "version": "0.1.7",

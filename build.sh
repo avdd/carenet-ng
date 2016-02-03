@@ -397,11 +397,15 @@ _do_pydiff() {
 }
 
 
-__do_update_bower__wip__() {
+_do_update_bower_package() {
+  package=${1:-}
+  test "$package" || { echo "require package arg"; exit 1; }
+  version=${2:-}
+  test "$version" || { echo "require version arg"; exit 1; }
   bower=node_modules/.bin/bower
-  $bower list
-  $bower install -FES $package'#version'
+  $bower install -FES "$package#$version"
   node clean-bower.js
+  $bower list
 }
 
 
