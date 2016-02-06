@@ -392,33 +392,23 @@ _do_check_deps() {
 }
 
 
-_do_pydiff() {
-  # ./build.sh pydiff | patch python-requires.txt
-  pip=.cache/python/bin/pip
-  pattern='carenet-ng'
-  diff -u $PYTHON_REQUIRES <( $pip freeze |egrep -v "$pattern" )
-}
-
-
-_do_update_bower_package() {
-  package=${1:-}
-  test "$package" || { echo "require package arg"; exit 1; }
-  version=${2:-}
-  test "$version" || { echo "require version arg"; exit 1; }
-  bower=node_modules/.bin/bower
-  $bower install -FES "$package#$version"
+_do_run_bower() {
+  local action=${1:-}
+  test "$action" || { echo "require action"; exit 1; }
+  shift
+  local bower=node_modules/.bin/bower
+  $bower $action -FES "$@"
   node clean-bower.js
   $bower list
 }
 
 
-_do_update_npm_package() {
-  package=${1:-}
-  test "$package" || { echo "require package arg"; exit 1; }
-  version=${2:-latest}
-  # pasted+adapted from shell history
+_do_run_npm() {
+  local action=${1:-}
+  test "$action" || { echo "require action"; exit 1; }
+  shift
   (cd $(readlink -f .cache) \
-    && npm install --save "$package@$version" \
+    && npm $action --save "$@" \
     && node src/clean-shrinkwrap.js)
 
   for f in npm-shrinkwrap.json package.json
@@ -430,6 +420,25 @@ _do_update_npm_package() {
 
   # check above completed without error, then test
   #$GULP_JS test
+}
+
+
+_do_pydiff() {
+  # ./build.sh pydiff | patch python-requires.txt
+  _init_build
+  local pip=$PYTHON/bin/pip
+  local pattern='carenet-ng'
+  diff -u $PYTHON_REQUIRES <( $pip freeze |egrep -v "$pattern" )
+}
+
+
+_do_run_pip() {
+  local action=${1:-}
+  test "$action" || { echo "require action"; exit 1; }
+  shift
+  _init_build
+  local pip=$PYTHON/bin/pip
+  $pip $action "$@"
 }
 
 
