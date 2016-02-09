@@ -236,10 +236,7 @@ function AppService(Api, Data, $q, $log) {
   }
 
   App.getSession = function getSession() {
-    return Data.get(SESSION_KEY)
-      .catch(function (e) {
-        return $q.reject({message: 'no session'});
-      });
+    return Data.get(SESSION_KEY);
   }
 
 }
