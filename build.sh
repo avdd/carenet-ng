@@ -457,7 +457,7 @@ _do_provision_vagrant_user() {
   }
   dropdb carenet_test || true
   createdb carenet_test
-  psql -Xaq1 -v ON_ERROR_STOP=1 -d carenet_test -f /vagrant/test-db.sql 
+  psql -Xaq1 -v ON_ERROR_STOP=1 -d carenet_test -f /vagrant/db.sql 
 }
 
 _build_all() {

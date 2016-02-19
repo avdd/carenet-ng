@@ -13,7 +13,7 @@ before_install:
 install: 
   - ./build.sh setup
   - createdb carenet_test
-  - psql -d carenet_test -f test-db.sql
+  - psql -d carenet_test -f db.sql
 
 script: 
   - ./gulp test
